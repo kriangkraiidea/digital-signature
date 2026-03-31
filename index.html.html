@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ลายเซ็นดิจิทัล</title>
+<!--
+  ======================================================
+  Digital Signature App · ลายเซ็นดิจิทัล
+  ======================================================
+  Created by : Kriangkrai Ketraksa (เกรียงไกร เกตุรักษา)
+  Version    : 1.0.0
+  License    : MIT
+  ======================================================
+-->
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&family=Playfair+Display:ital,wght@1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --paper: #f5f0e8;
+    --gold: #c9a84c;
+    --gold-light: #e8d5a3;
+    --cream: #faf7f2;
+    --shadow: rgba(26,26,46,0.15);
+    --accent: #8b0000;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    font-family: 'Sarabun', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(139,0,0,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .title-block {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  .title-block h1 {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--gold);
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+
+  .title-block p {
+    color: rgba(245,240,232,0.45);
+    font-size: 0.85rem;
+    margin-top: 8px;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+  }
+
+  .card {
+    background: var(--cream);
+    border-radius: 2px;
+    width: 100%;
+    max-width: 680px;
+    box-shadow: 
+      0 2px 0 var(--gold),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.8);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+  }
+
+  .card-inner {
+    padding: 36px 40px;
+  }
+
+  /* --- Name Section --- */
+  .section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .name-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+    align-items: flex-end;
+  }
+
+  .name-input-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    border: none;
+    border-bottom: 1.5px solid rgba(26,26,46,0.2);
+    background: transparent;
+    padding: 10px 4px 8px;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--gold);
+  }
+
+  input[type="text"]::placeholder {
+    color: rgba(26,26,46,0.25);
+    font-style: italic;
+  }
+
+  /* --- Tab Toggle --- */
+  .tab-row {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    border-bottom: 1.5px solid rgba(26,26,46,0.1);
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(26,26,46,0.4);
+    padding: 10px 18px;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+  }
+
+  .tab-btn.active {
+    color: var(--ink);
+  }
+
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1.5px; left: 18px; right: 18px;
+    height: 2px;
+    background: var(--gold);
+  }
+
+  /* --- Canvas Area --- */
+  .canvas-wrap {
+    position: relative;
+    border: 1.5px solid rgba(26,26,46,0.12);
+    border-radius: 1px;
+    background: white;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  .canvas-wrap::after {
+    content: 'เซ็นชื่อของคุณที่นี่';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: rgba(26,26,46,0.1);
+    pointer-events: none;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    transition: opacity 0.3s;
+  }
+
+  .canvas-wrap.has-strokes::after { opacity: 0; }
+
+  canvas {
+    display: block;
+    width: 100%;
+    touch-action: none;
+  }
+
+  /* --- Upload area --- */
+  .upload-area {
+    border: 1.5px dashed rgba(26,26,46,0.2);
+    border-radius: 2px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: rgba(255,255,255,0.5);
+    position: relative;
+  }
+
+  .upload-area:hover { border-color: var(--gold); background: rgba(201,168,76,0.04); }
+
+  .upload-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .upload-icon {
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+    opacity: 0.35;
+  }
+
+  .upload-area p {
+    color: rgba(26,26,46,0.45);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .upload-preview {
+    max-width: 100%;
+    max-height: 220px;
+    margin-top: 16px;
+    border-radius: 2px;
+    display: none;
+    box-shadow: 0 2px 12px var(--shadow);
+  }
+
+  /* --- Tools row --- */
+  .tools-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .tool-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(26,26,46,0.4);
+  }
+
+  .color-swatches {
+    display: flex;
+    gap: 6px;
+  }
+
+  .swatch {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .swatch:hover, .swatch.active { border-color: var(--gold); transform: scale(1.15); }
+
+  .size-btns {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .size-btn {
+    background: rgba(26,26,46,0.08);
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .size-btn:hover { background: rgba(201,168,76,0.25); }
+  .size-btn.active { background: var(--gold); }
+
+  .size-btn span {
+    background: var(--ink);
+    border-radius: 50%;
+    display: block;
+  }
+
+  .s1 { width: 26px; height: 26px; } .s1 span { width: 3px; height: 3px; }
+  .s2 { width: 26px; height: 26px; } .s2 span { width: 5px; height: 5px; }
+  .s3 { width: 26px; height: 26px; } .s3 span { width: 8px; height: 8px; }
+
+  /* spacer */
+  .spacer { flex: 1; }
+
+  .clear-btn {
+    background: none;
+    border: 1px solid rgba(26,26,46,0.15);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(26,26,46,0.45);
+    padding: 6px 14px;
+    border-radius: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* --- Divider --- */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(26,26,46,0.1), transparent);
+    margin: 28px 0;
+  }
+
+  /* --- Action Buttons --- */
+  .actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    flex: 1;
+    min-width: 140px;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 1px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--gold);
+    box-shadow: 0 4px 14px rgba(26,26,46,0.2);
+  }
+
+  .btn-primary:hover {
+    background: #2a2a4e;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(26,26,46,0.3);
+  }
+
+  .btn-secondary {
+    background: var(--gold);
+    color: var(--ink);
+    box-shadow: 0 4px 14px rgba(201,168,76,0.25);
+  }
+
+  .btn-secondary:hover {
+    background: #d4b05c;
+    transform: translateY(-1px);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--ink);
+    border: 1.5px solid rgba(26,26,46,0.2);
+  }
+
+  .btn-outline:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* --- Gallery --- */
+  .gallery-section {
+    width: 100%;
+    max-width: 680px;
+    margin-top: 28px;
+  }
+
+  .gallery-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .gallery-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    color: rgba(245,240,232,0.6);
+    font-weight: 400;
+  }
+
+  .gallery-header .count-badge {
+    background: rgba(201,168,76,0.2);
+    color: var(--gold);
+    font-size: 0.7rem;
+    padding: 2px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.1em;
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .gallery-item {
+    background: var(--cream);
+    border-radius: 2px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    position: relative;
+    group: true;
+    transition: transform 0.2s;
+  }
+
+  .gallery-item:hover { transform: translateY(-3px); }
+
+  .gallery-item img {
+    width: 100%;
+    height: 100px;
+    object-fit: contain;
+    padding: 12px;
+    background: white;
+    display: block;
+  }
+
+  .gallery-item .gi-info {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(26,26,46,0.08);
+  }
+
+  .gallery-item .gi-name {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .gallery-item .gi-date {
+    font-size: 0.65rem;
+    color: rgba(26,26,46,0.35);
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .gallery-item .gi-actions {
+    position: absolute;
+    top: 6px; right: 6px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .gallery-item:hover .gi-actions { opacity: 1; }
+
+  .gi-btn {
+    background: rgba(26,26,46,0.75);
+    border: none;
+    color: white;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.7rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+    backdrop-filter: blur(4px);
+  }
+
+  .gi-btn:hover { background: var(--gold); color: var(--ink); }
+
+  .empty-gallery {
+    text-align: center;
+    padding: 32px;
+    color: rgba(245,240,232,0.2);
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: var(--gold);
+    padding: 12px 24px;
+    border-radius: 2px;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    border: 1px solid rgba(201,168,76,0.3);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 999;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Hidden tab panels */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  @media (max-width: 480px) {
+    .card-inner { padding: 24px 20px; }
+    .actions { flex-direction: column; }
+    .btn { min-width: unset; }
+  }
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <h1>Digital Signature</h1>
+  <p>ลายเซ็นดิจิทัล · บันทึกและดาวน์โหลด PNG</p>
+</div>
+
+<div class="card">
+  <div class="card-inner">
+
+    <!-- Name -->
+    <div class="section-label">ชื่อ-นามสกุล</div>
+    <div class="name-row">
+      <div class="name-input-wrap">
+        <input type="text" id="signerName" placeholder="กรอกชื่อของคุณ" autocomplete="off">
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('draw', this)">✏️ วาดลายเซ็น</button>
+      <button class="tab-btn" onclick="switchTab('upload', this)">🖼️ อัปโหลดภาพ</button>
+    </div>
+
+    <!-- Draw Panel -->
+    <div class="tab-panel active" id="panel-draw">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="sigCanvas" height="220"></canvas>
+      </div>
+      <div class="tools-row">
+        <span class="tool-label">สี</span>
+        <div class="color-swatches">
+          <div class="swatch active" style="background:#1a1a2e" data-color="#1a1a2e" onclick="setColor(this)"></div>
+          <div class="swatch" style="background:#8b0000" data-color="#8b0000" onclick="setColor(this)"></div>
+          <div class="swatch" style="background:#1a3a6e" data-color="#1a3a6e" onclick="setColor(this)"></div>
+          <div class="swatch" style="background:#2d4a1e" data-color="#2d4a1e" onclick="setColor(this)"></div>
+          <div class="swatch" style="background:#4a1a4a" data-color="#4a1a4a" onclick="setColor(this)"></div>
+        </div>
+        <span class="tool-label" style="margin-left:8px">ขนาด</span>
+        <div class="size-btns">
+          <button class="size-btn s1" onclick="setSize(1.5, this)"><span></span></button>
+          <button class="size-btn s2 active" onclick="setSize(2.5, this)"><span></span></button>
+          <button class="size-btn s3" onclick="setSize(4, this)"><span></span></button>
+        </div>
+        <div class="spacer"></div>
+        <button class="clear-btn" onclick="clearCanvas()">ล้าง</button>
+      </div>
+    </div>
+
+    <!-- Upload Panel -->
+    <div class="tab-panel" id="panel-upload">
+      <div class="upload-area" id="uploadArea">
+        <input type="file" id="fileInput" accept="image/*" onchange="handleUpload(event)">
+        <div class="upload-icon">📎</div>
+        <p>คลิกเพื่อเลือกภาพลายเซ็น<br><span style="opacity:0.6;font-size:0.75rem">PNG, JPG, GIF · ขนาดไม่เกิน 5MB</span></p>
+        <img class="upload-preview" id="uploadPreview" alt="preview">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="saveToGallery()">
+        💾 บันทึกลง Drive
+      </button>
+      <button class="btn btn-secondary" onclick="downloadPNG()">
+        ⬇️ Save as PNG
+      </button>
+      <button class="btn btn-outline" onclick="clearAll()">
+        ✕ เริ่มใหม่
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Gallery -->
+<div class="gallery-section">
+  <div class="gallery-header">
+    <h2>Drive ของฉัน</h2>
+    <span class="count-badge" id="countBadge">0 รายการ</span>
+  </div>
+  <div class="gallery-grid" id="gallery">
+    <div class="empty-gallery" id="emptyMsg">ยังไม่มีลายเซ็นที่บันทึก</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer style="margin-top:40px;text-align:center;font-size:0.7rem;letter-spacing:0.12em;color:rgba(245,240,232,0.22);font-family:'Sarabun',sans-serif;">
+  Created by <span style="color:rgba(201,168,76,0.5)">Kriangkrai Ketraksa</span> &nbsp;·&nbsp; เกรียงไกร เกตุรักษา
+</footer>
+
+<script>
+// ---- Canvas Setup ----
+const canvas = document.getElementById('sigCanvas');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvasWrap');
+let drawing = false, lastX = 0, lastY = 0;
+let penColor = '#1a1a2e', penSize = 2.5;
+let hasStrokes = false;
+
+function resizeCanvas() {
+  const w = wrap.clientWidth;
+  const ratio = window.devicePixelRatio || 1;
+  const imgData = canvas.width ? ctx.getImageData(0, 0, canvas.width, canvas.height) : null;
+  canvas.width = w * ratio;
+  canvas.height = 220 * ratio;
+  canvas.style.width = w + 'px';
+  canvas.style.height = '220px';
+  ctx.scale(ratio, ratio);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (imgData) ctx.putImageData(imgData, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - r.left, y: src.clientY - r.top };
+}
+
+function startDraw(e) {
+  e.preventDefault();
+  drawing = true;
+  const p = getPos(e);
+  lastX = p.x; lastY = p.y;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, penSize / 2, 0, Math.PI * 2);
+  ctx.fillStyle = penColor;
+  ctx.fill();
+}
+
+function draw(e) {
+  if (!drawing) return;
+  e.preventDefault();
+  const p = getPos(e);
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(p.x, p.y);
+  ctx.strokeStyle = penColor;
+  ctx.lineWidth = penSize;
+  ctx.stroke();
+  lastX = p.x; lastY = p.y;
+  if (!hasStrokes) { hasStrokes = true; wrap.classList.add('has-strokes'); }
+}
+
+function endDraw() { drawing = false; }
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('mouseleave', endDraw);
+canvas.addEventListener('touchstart', startDraw, { passive: false });
+canvas.addEventListener('touchmove', draw, { passive: false });
+canvas.addEventListener('touchend', endDraw);
+
+function setColor(el) {
+  penColor = el.dataset.color;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setSize(s, el) {
+  penSize = s;
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function clearCanvas() {
+  const ratio = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width / ratio, canvas.height / ratio);
+  hasStrokes = false;
+  wrap.classList.remove('has-strokes');
+}
+
+// ---- Tabs ----
+let activeTab = 'draw';
+function switchTab(tab, btn) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'draw') setTimeout(resizeCanvas, 50);
+}
+
+// ---- Upload ----
+let uploadedDataURL = null;
+function handleUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showToast('ไฟล์ใหญ่เกิน 5MB'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    uploadedDataURL = ev.target.result;
+    const prev = document.getElementById('uploadPreview');
+    prev.src = uploadedDataURL;
+    prev.style.display = 'block';
+    document.querySelector('#uploadArea p').style.opacity = '0.4';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---- Get current signature as transparent PNG ----
+function getSignatureDataURL() {
+  if (activeTab === 'draw') {
+    if (!hasStrokes) { showToast('กรุณาเซ็นชื่อก่อน'); return null; }
+    // Render on transparent canvas
+    const ratio = window.devicePixelRatio || 1;
+    const out = document.createElement('canvas');
+    out.width = canvas.width;
+    out.height = canvas.height;
+    const oc = out.getContext('2d');
+    oc.drawImage(canvas, 0, 0);
+    return out.toDataURL('image/png');
+  } else {
+    if (!uploadedDataURL) { showToast('กรุณาเลือกภาพก่อน'); return null; }
+    return uploadedDataURL;
+  }
+}
+
+// ---- Download PNG ----
+function downloadPNG() {
+  const dataURL = getSignatureDataURL();
+  if (!dataURL) return;
+  const name = (document.getElementById('signerName').value.trim() || 'signature');
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = name.replace(/\s+/g, '_') + '_signature.png';
+  a.click();
+  showToast('ดาวน์โหลดแล้ว ✓');
+}
+
+// ---- Local "Drive" Storage ----
+const STORAGE_KEY = 'signature_drive_v1';
+
+function loadGallery() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveGallery(items) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function saveToGallery() {
+  const dataURL = getSignatureDataURL();
+  if (!dataURL) return;
+  const name = document.getElementById('signerName').value.trim() || 'ไม่ระบุชื่อ';
+  const items = loadGallery();
+  const id = Date.now().toString();
+  items.unshift({ id, name, dataURL, date: new Date().toLocaleDateString('th-TH') });
+  saveGallery(items);
+  renderGallery();
+  showToast('บันทึกลง Drive แล้ว ✓');
+}
+
+function deleteItem(id) {
+  let items = loadGallery().filter(i => i.id !== id);
+  saveGallery(items);
+  renderGallery();
+  showToast('ลบแล้ว');
+}
+
+function downloadItem(id) {
+  const item = loadGallery().find(i => i.id === id);
+  if (!item) return;
+  const a = document.createElement('a');
+  a.href = item.dataURL;
+  a.download = (item.name || 'signature').replace(/\s+/g, '_') + '_signature.png';
+  a.click();
+}
+
+function renderGallery() {
+  const items = loadGallery();
+  const grid = document.getElementById('gallery');
+  const badge = document.getElementById('countBadge');
+  const empty = document.getElementById('emptyMsg');
+  badge.textContent = items.length + ' รายการ';
+
+  const cards = grid.querySelectorAll('.gallery-item');
+  cards.forEach(c => c.remove());
+
+  if (items.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'gallery-item';
+    div.innerHTML = `
+      <img src="${item.dataURL}" alt="${item.name}">
+      <div class="gi-info">
+        <div class="gi-name">${item.name}</div>
+        <div class="gi-date">${item.date}</div>
+      </div>
+      <div class="gi-actions">
+        <button class="gi-btn" title="ดาวน์โหลด" onclick="downloadItem('${item.id}')">⬇</button>
+        <button class="gi-btn" title="ลบ" onclick="deleteItem('${item.id}')">✕</button>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function clearAll() {
+  clearCanvas();
+  uploadedDataURL = null;
+  document.getElementById('uploadPreview').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  document.querySelector('#uploadArea p').style.opacity = '1';
+  document.getElementById('signerName').value = '';
+}
+
+// ---- Toast ----
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ---- Init ----
+renderGallery();
+</script>
+</body>
+</html>
