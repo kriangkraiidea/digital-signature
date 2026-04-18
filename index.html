@@ -3,872 +3,1073 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ลายเซ็นดิจิทัล</title>
-<!--
-  ======================================================
-  Digital Signature App · ลายเซ็นดิจิทัล
-  ======================================================
-  Created by : Kriangkrai Ketraksa (เกรียงไกร เกตุรักษา)
-  Version    : 1.0.0
-  License    : MIT
-  ======================================================
--->
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&family=Playfair+Display:ital,wght@1,400;1,600&display=swap" rel="stylesheet">
+<title>DivTrack — ติดตามหุ้นปันผล</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #1a1a2e;
-    --paper: #f5f0e8;
-    --gold: #c9a84c;
-    --gold-light: #e8d5a3;
-    --cream: #faf7f2;
-    --shadow: rgba(26,26,46,0.15);
-    --accent: #8b0000;
+    --bg:#0f1117;--bg2:#161a24;--bg3:#1d2333;--bg4:#252b3b;
+    --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+    --text:#e8ecf4;--muted:#7c8aa0;--faint:#3a4258;
+    --accent:#4ade80;--accent2:#22d3ee;--accent3:#f59e0b;
+    --accent4:#f87171;--accent5:#a78bfa;
+    --font:'Noto Sans Thai',sans-serif;--mono:'DM Mono',monospace;
+    --r:10px;--r2:16px;--sidebar-w:220px;--topbar-h:56px;
   }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;min-height:100vh;}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--ink);
-    font-family: 'Sarabun', sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 20px;
-    position: relative;
-    overflow-x: hidden;
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{
+    width:var(--sidebar-w);flex-shrink:0;background:var(--bg2);
+    border-right:1px solid var(--border);display:flex;flex-direction:column;
+    padding:24px 0;position:fixed;top:0;left:0;height:100vh;z-index:100;
+    transition:transform 0.28s cubic-bezier(.4,0,.2,1);
   }
+  .main{margin-left:var(--sidebar-w);flex:1;padding:32px 40px;max-width:1300px;}
 
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: 
-      radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(139,0,0,0.06) 0%, transparent 50%);
-    pointer-events: none;
+  .topbar{
+    display:none;position:fixed;top:0;left:0;right:0;height:var(--topbar-h);
+    background:var(--bg2);border-bottom:1px solid var(--border);
+    align-items:center;padding:0 16px;z-index:200;gap:12px;
   }
-
-  .title-block {
-    text-align: center;
-    margin-bottom: 36px;
+  .topbar-logo{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--accent);flex:1;}
+  .topbar-logo span{color:var(--accent2);}
+  .burger{
+    background:none;border:1px solid var(--border2);border-radius:8px;
+    color:var(--text);width:36px;height:36px;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;font-size:18px;flex-shrink:0;
   }
+  .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99;}
+  .drawer-overlay.open{display:block;}
+  .sidebar.drawer-open{transform:translateX(0)!important;box-shadow:4px 0 32px rgba(0,0,0,.6);}
 
-  .title-block h1 {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-size: clamp(2rem, 5vw, 3rem);
-    color: var(--gold);
-    letter-spacing: 0.02em;
-    line-height: 1.1;
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-mark{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--accent);letter-spacing:-0.5px;}
+  .logo-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;
+    color:var(--muted);font-size:13px;border-left:2px solid transparent;transition:all 0.15s;
+    user-select:none;
   }
+  .nav-item:hover{color:var(--text);background:var(--bg3);}
+  .nav-item.active{color:var(--text);border-left-color:var(--accent);background:var(--bg3);}
+  .nav-icon{width:16px;height:16px;opacity:0.7;flex-shrink:0;}
+  .sidebar-bottom{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);}
+  .goal-indicator{font-size:11px;color:var(--muted);margin-bottom:6px;}
+  .goal-bar{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;}
+  .goal-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s;}
+  .goal-pct{font-size:12px;color:var(--accent);margin-top:4px;font-family:var(--mono);}
 
-  .title-block p {
-    color: rgba(245,240,232,0.45);
-    font-size: 0.85rem;
-    margin-top: 8px;
-    font-weight: 300;
-    letter-spacing: 0.1em;
+  .page{display:none;}
+  .page.active{display:block;}
+  .page-title{font-size:22px;font-weight:600;color:var(--text);margin-bottom:4px;}
+  .page-sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  .page.active>*{animation:fadeUp .22s ease both;}
+  .page.active>*:nth-child(2){animation-delay:.05s;}
+  .page.active>*:nth-child(3){animation-delay:.1s;}
+  .page.active>*:nth-child(4){animation-delay:.15s;}
+
+  .metric-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
+  .metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;}
+  .metric-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+  .metric-val{font-size:20px;font-weight:600;font-family:var(--mono);color:var(--text);}
+  .metric-val.green{color:var(--accent);}
+  .metric-val.cyan{color:var(--accent2);}
+  .metric-val.amber{color:var(--accent3);}
+  .metric-badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:4px;margin-top:4px;font-family:var(--mono);}
+  .badge-green{background:rgba(74,222,128,.1);color:var(--accent);}
+  .badge-amber{background:rgba(245,158,11,.1);color:var(--accent3);}
+  .badge-red{background:rgba(248,113,113,.1);color:var(--accent4);}
+  .badge-cyan{background:rgba(34,211,238,.1);color:var(--accent2);}
+
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:20px;}
+  .card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .card-title{font-size:14px;font-weight:500;}
+
+  .table-scroll-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{width:100%;border-collapse:collapse;min-width:960px;}
+  th{padding:10px 14px;text-align:left;font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2);}
+  th.num{text-align:right;}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--bg3);}
+  .td-num{text-align:right;font-family:var(--mono);font-size:13px;}
+  .td-green{color:var(--accent);}
+  .td-amber{color:var(--accent3);}
+  .td-red{color:var(--accent4);}
+  .td-cyan{color:var(--accent2);}
+  .stock-name{font-weight:500;font-size:14px;color:var(--text);font-family:var(--mono);letter-spacing:.5px;}
+  .stock-full{font-size:11px;color:var(--muted);margin-top:1px;}
+  .action-btn{
+    background:none;border:1px solid var(--border2);border-radius:6px;
+    color:var(--muted);padding:5px 12px;cursor:pointer;font-size:12px;
+    font-family:var(--font);transition:all .15s;white-space:nowrap;
   }
+  .action-btn:hover{color:var(--text);background:var(--bg4);}
+  .action-btn.danger:hover{border-color:var(--accent4);color:var(--accent4);}
+  .btn-row{display:flex;gap:6px;}
 
-  .card {
-    background: var(--cream);
-    border-radius: 2px;
-    width: 100%;
-    max-width: 680px;
-    box-shadow: 
-      0 2px 0 var(--gold),
-      0 20px 60px rgba(0,0,0,0.4),
-      inset 0 1px 0 rgba(255,255,255,0.8);
-    overflow: hidden;
-    position: relative;
+  .stock-card-list{display:none;}
+  .stock-card-item{border-bottom:1px solid var(--border);padding:14px 16px;}
+  .stock-card-item:last-child{border-bottom:none;}
+  .scard-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+  .scard-body{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-bottom:10px;}
+  .scard-key{color:var(--muted);font-size:11px;}
+  .scard-val{font-family:var(--mono);font-size:12px;}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+  .form-group{display:flex;flex-direction:column;gap:6px;}
+  .form-group.full{grid-column:1/-1;}
+  label{font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
+  input[type=text],input[type=number],select,textarea{
+    background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);
+    color:var(--text);padding:10px 12px;font-family:var(--font);font-size:13px;
+    outline:none;transition:border .15s;width:100%;
   }
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  select option{background:var(--bg3);}
+  .btn-primary{background:var(--accent);color:#0f1a0f;border:none;border-radius:var(--r);padding:11px 24px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s;}
+  .btn-primary:hover{opacity:.85;}
+  .btn-ghost{background:none;border:1px solid var(--border2);border-radius:var(--r);color:var(--muted);padding:11px 20px;font-family:var(--font);font-size:14px;cursor:pointer;transition:all .15s;}
+  .btn-ghost:hover{color:var(--text);border-color:var(--text);}
 
-  .card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+  /* Range + number combo */
+  .range-combo{display:flex;align-items:center;gap:8px;}
+  .range-combo input[type=range]{flex:1;accent-color:var(--accent);background:transparent;cursor:pointer;}
+  .range-num{
+    width:88px;flex-shrink:0;padding:7px 10px;
+    background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);
+    color:var(--accent);font-family:var(--mono);font-size:13px;text-align:right;
+    outline:none;transition:border .15s;
   }
+  .range-num:focus{border-color:var(--accent);}
+  .range-num::-webkit-inner-spin-button,.range-num::-webkit-outer-spin-button{-webkit-appearance:none;}
 
-  .card-inner {
-    padding: 36px 40px;
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;align-items:center;justify-content:center;padding:16px;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:24px;width:520px;max-width:100%;max-height:90vh;overflow-y:auto;}
+  .modal-title{font-size:17px;font-weight:600;margin-bottom:20px;}
+  .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+
+  .calc-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .calc-result-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px;}
+  .calc-result-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .calc-result-row:last-child{border-bottom:none;}
+  .calc-result-row .key{color:var(--muted);}
+  .calc-result-row .val{font-family:var(--mono);font-weight:500;}
+
+  .compare-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+  .compare-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;transition:border .2s;}
+  .compare-card:hover{border-color:var(--border2);}
+  .compare-card.highlight{border-color:var(--accent);}
+  .compare-stock-name{font-family:var(--mono);font-size:16px;font-weight:500;margin-bottom:12px;}
+  .compare-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;}
+  .compare-key{color:var(--muted);}
+  .compare-val{font-family:var(--mono);}
+
+  .cal-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin-bottom:12px;}
+  .cal-month{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center;min-height:80px;font-size:11px;color:var(--muted);}
+  .cal-month.has-div{border-color:var(--border2);}
+  .cal-month-name{font-weight:500;margin-bottom:6px;font-size:11px;color:var(--muted);}
+  .cal-chip{display:block;font-size:10px;padding:2px 4px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);}
+  .cal-total{font-size:11px;color:var(--accent);margin-top:4px;font-family:var(--mono);}
+
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:12px 18px;font-size:13px;color:var(--text);transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;pointer-events:none;}
+  .toast.show{transform:translateY(0);opacity:1;}
+
+  hr{border:none;border-top:1px solid var(--border);margin:20px 0;}
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--faint);border-radius:3px;}
+
+  .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);z-index:200;padding:6px 0 env(safe-area-inset-bottom,0);}
+  .mobile-nav-inner{display:flex;justify-content:space-around;}
+  .mobile-nav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;cursor:pointer;color:var(--muted);font-size:10px;border:none;background:none;font-family:var(--font);transition:color .15s;}
+  .mobile-nav-btn.active{color:var(--accent);}
+  .mobile-nav-btn svg{width:20px;height:20px;}
+
+  .credit{text-align:center;padding:18px 20px;font-size:11px;color:var(--faint);border-top:1px solid var(--border);margin-top:4px;}
+  .credit strong{color:var(--muted);}
+
+  @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:768px){
+    .sidebar{transform:translateX(-100%);}
+    .main{margin-left:0;padding:16px 16px 90px;margin-top:var(--topbar-h);}
+    .topbar{display:flex;}
+    .mobile-nav{display:block;}
+    .metric-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;}
+    .metric-card{padding:14px;}
+    .metric-val{font-size:17px;}
+    .metric-label{font-size:10px;}
+    .page-title{font-size:18px;}
+    .page-sub{margin-bottom:14px;}
+    .table-scroll-wrap{display:none;}
+    .stock-card-list{display:block;}
+    .form-grid{grid-template-columns:1fr;}
+    .calc-layout{grid-template-columns:1fr;}
+    .compare-grid{grid-template-columns:repeat(2,1fr);}
+    .cal-grid{grid-template-columns:repeat(4,1fr);}
+    .modal{padding:20px 16px;border-radius:var(--r2) var(--r2) 0 0;}
+    .modal-bg{align-items:flex-end;padding:0;}
   }
-
-  /* --- Name Section --- */
-  .section-label {
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--gold);
-    font-weight: 600;
-    margin-bottom: 10px;
-  }
-
-  .name-row {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 28px;
-    align-items: flex-end;
-  }
-
-  .name-input-wrap {
-    flex: 1;
-    position: relative;
-  }
-
-  input[type="text"] {
-    width: 100%;
-    border: none;
-    border-bottom: 1.5px solid rgba(26,26,46,0.2);
-    background: transparent;
-    padding: 10px 4px 8px;
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-size: 1.3rem;
-    color: var(--ink);
-    outline: none;
-    transition: border-color 0.3s;
-  }
-
-  input[type="text"]:focus {
-    border-color: var(--gold);
-  }
-
-  input[type="text"]::placeholder {
-    color: rgba(26,26,46,0.25);
-    font-style: italic;
-  }
-
-  /* --- Tab Toggle --- */
-  .tab-row {
-    display: flex;
-    gap: 0;
-    margin-bottom: 16px;
-    border-bottom: 1.5px solid rgba(26,26,46,0.1);
-  }
-
-  .tab-btn {
-    background: none;
-    border: none;
-    font-family: 'Sarabun', sans-serif;
-    font-size: 0.82rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(26,26,46,0.4);
-    padding: 10px 18px;
-    cursor: pointer;
-    position: relative;
-    transition: color 0.2s;
-  }
-
-  .tab-btn.active {
-    color: var(--ink);
-  }
-
-  .tab-btn.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1.5px; left: 18px; right: 18px;
-    height: 2px;
-    background: var(--gold);
-  }
-
-  /* --- Canvas Area --- */
-  .canvas-wrap {
-    position: relative;
-    border: 1.5px solid rgba(26,26,46,0.12);
-    border-radius: 1px;
-    background: white;
-    overflow: hidden;
-    cursor: crosshair;
-  }
-
-  .canvas-wrap::after {
-    content: 'เซ็นชื่อของคุณที่นี่';
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-size: 1rem;
-    color: rgba(26,26,46,0.1);
-    pointer-events: none;
-    letter-spacing: 0.05em;
-    white-space: nowrap;
-    transition: opacity 0.3s;
-  }
-
-  .canvas-wrap.has-strokes::after { opacity: 0; }
-
-  canvas {
-    display: block;
-    width: 100%;
-    touch-action: none;
-  }
-
-  /* --- Upload area --- */
-  .upload-area {
-    border: 1.5px dashed rgba(26,26,46,0.2);
-    border-radius: 2px;
-    padding: 40px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    background: rgba(255,255,255,0.5);
-    position: relative;
-  }
-
-  .upload-area:hover { border-color: var(--gold); background: rgba(201,168,76,0.04); }
-
-  .upload-area input[type="file"] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-    width: 100%;
-    height: 100%;
-    border: none;
-  }
-
-  .upload-icon {
-    font-size: 2.2rem;
-    margin-bottom: 10px;
-    opacity: 0.35;
-  }
-
-  .upload-area p {
-    color: rgba(26,26,46,0.45);
-    font-size: 0.85rem;
-    line-height: 1.6;
-  }
-
-  .upload-preview {
-    max-width: 100%;
-    max-height: 220px;
-    margin-top: 16px;
-    border-radius: 2px;
-    display: none;
-    box-shadow: 0 2px 12px var(--shadow);
-  }
-
-  /* --- Tools row --- */
-  .tools-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-  }
-
-  .tool-label {
-    font-size: 0.7rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: rgba(26,26,46,0.4);
-  }
-
-  .color-swatches {
-    display: flex;
-    gap: 6px;
-  }
-
-  .swatch {
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: border-color 0.2s, transform 0.2s;
-  }
-
-  .swatch:hover, .swatch.active { border-color: var(--gold); transform: scale(1.15); }
-
-  .size-btns {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .size-btn {
-    background: rgba(26,26,46,0.08);
-    border: none;
-    cursor: pointer;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.2s;
-  }
-  .size-btn:hover { background: rgba(201,168,76,0.25); }
-  .size-btn.active { background: var(--gold); }
-
-  .size-btn span {
-    background: var(--ink);
-    border-radius: 50%;
-    display: block;
-  }
-
-  .s1 { width: 26px; height: 26px; } .s1 span { width: 3px; height: 3px; }
-  .s2 { width: 26px; height: 26px; } .s2 span { width: 5px; height: 5px; }
-  .s3 { width: 26px; height: 26px; } .s3 span { width: 8px; height: 8px; }
-
-  /* spacer */
-  .spacer { flex: 1; }
-
-  .clear-btn {
-    background: none;
-    border: 1px solid rgba(26,26,46,0.15);
-    font-family: 'Sarabun', sans-serif;
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(26,26,46,0.45);
-    padding: 6px 14px;
-    border-radius: 1px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* --- Divider --- */
-  .divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(26,26,46,0.1), transparent);
-    margin: 28px 0;
-  }
-
-  /* --- Action Buttons --- */
-  .actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .btn {
-    flex: 1;
-    min-width: 140px;
-    padding: 14px 20px;
-    border: none;
-    border-radius: 1px;
-    font-family: 'Sarabun', sans-serif;
-    font-size: 0.8rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.25s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .btn-primary {
-    background: var(--ink);
-    color: var(--gold);
-    box-shadow: 0 4px 14px rgba(26,26,46,0.2);
-  }
-
-  .btn-primary:hover {
-    background: #2a2a4e;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(26,26,46,0.3);
-  }
-
-  .btn-secondary {
-    background: var(--gold);
-    color: var(--ink);
-    box-shadow: 0 4px 14px rgba(201,168,76,0.25);
-  }
-
-  .btn-secondary:hover {
-    background: #d4b05c;
-    transform: translateY(-1px);
-  }
-
-  .btn-outline {
-    background: transparent;
-    color: var(--ink);
-    border: 1.5px solid rgba(26,26,46,0.2);
-  }
-
-  .btn-outline:hover {
-    border-color: var(--gold);
-    color: var(--gold);
-  }
-
-  /* --- Gallery --- */
-  .gallery-section {
-    width: 100%;
-    max-width: 680px;
-    margin-top: 28px;
-  }
-
-  .gallery-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .gallery-header h2 {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-size: 1.1rem;
-    color: rgba(245,240,232,0.6);
-    font-weight: 400;
-  }
-
-  .gallery-header .count-badge {
-    background: rgba(201,168,76,0.2);
-    color: var(--gold);
-    font-size: 0.7rem;
-    padding: 2px 10px;
-    border-radius: 20px;
-    letter-spacing: 0.1em;
-  }
-
-  .gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
-  }
-
-  .gallery-item {
-    background: var(--cream);
-    border-radius: 2px;
-    overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-    position: relative;
-    group: true;
-    transition: transform 0.2s;
-  }
-
-  .gallery-item:hover { transform: translateY(-3px); }
-
-  .gallery-item img {
-    width: 100%;
-    height: 100px;
-    object-fit: contain;
-    padding: 12px;
-    background: white;
-    display: block;
-  }
-
-  .gallery-item .gi-info {
-    padding: 10px 12px;
-    border-top: 1px solid rgba(26,26,46,0.08);
-  }
-
-  .gallery-item .gi-name {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-size: 0.9rem;
-    color: var(--ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .gallery-item .gi-date {
-    font-size: 0.65rem;
-    color: rgba(26,26,46,0.35);
-    margin-top: 2px;
-    letter-spacing: 0.05em;
-  }
-
-  .gallery-item .gi-actions {
-    position: absolute;
-    top: 6px; right: 6px;
-    display: flex;
-    gap: 4px;
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  .gallery-item:hover .gi-actions { opacity: 1; }
-
-  .gi-btn {
-    background: rgba(26,26,46,0.75);
-    border: none;
-    color: white;
-    width: 26px; height: 26px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 0.7rem;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.2s;
-    backdrop-filter: blur(4px);
-  }
-
-  .gi-btn:hover { background: var(--gold); color: var(--ink); }
-
-  .empty-gallery {
-    text-align: center;
-    padding: 32px;
-    color: rgba(245,240,232,0.2);
-    font-size: 0.82rem;
-    letter-spacing: 0.08em;
-  }
-
-  /* Toast */
-  .toast {
-    position: fixed;
-    bottom: 30px; left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: var(--ink);
-    color: var(--gold);
-    padding: 12px 24px;
-    border-radius: 2px;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    border: 1px solid rgba(201,168,76,0.3);
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 999;
-    pointer-events: none;
-    white-space: nowrap;
-  }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-
-  /* Hidden tab panels */
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  @media (max-width: 480px) {
-    .card-inner { padding: 24px 20px; }
-    .actions { flex-direction: column; }
-    .btn { min-width: unset; }
+  @media(max-width:480px){
+    .metric-grid{grid-template-columns:1fr 1fr;}
+    .cal-grid{grid-template-columns:repeat(3,1fr);}
+    .compare-grid{grid-template-columns:1fr 1fr;}
   }
 </style>
 </head>
 <body>
 
-<div class="title-block">
-  <h1>Digital Signature</h1>
-  <p>ลายเซ็นดิจิทัล · บันทึกและดาวน์โหลด PNG</p>
+<div class="topbar">
+  <div class="topbar-logo">÷ Div<span>Track</span></div>
+  <button class="burger" id="burger-btn">☰</button>
+</div>
+<div class="drawer-overlay" id="drawer-overlay"></div>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="logo-mark">÷ Div<span style="color:var(--accent2)">Track</span></div>
+      <div class="logo-sub">ติดตามหุ้นปันผล</div>
+    </div>
+    <nav>
+      <div class="nav-item active" data-page="dashboard">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>ภาพรวม
+      </div>
+      <div class="nav-item" data-page="stocks">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>รายการหุ้น
+      </div>
+      <div class="nav-item" data-page="compare">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>เปรียบเทียบ
+      </div>
+      <div class="nav-item" data-page="calendar">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>ปฏิทินปันผล
+      </div>
+      <div class="nav-item" data-page="calculator">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>คำนวณเงินต้น
+      </div>
+      <div class="nav-item" data-page="settings">
+        <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>ตั้งค่า
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="goal-indicator">เป้าหมายรายได้/เดือน</div>
+      <div class="goal-bar"><div class="goal-fill" id="sidebar-goal-fill" style="width:0%"></div></div>
+      <div class="goal-pct" id="sidebar-goal-pct">—</div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-title">ภาพรวมพอร์ต</div>
+      <div class="page-sub" id="dash-date">—</div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">มูลค่าพอร์ตรวม</div>
+          <div class="metric-val" id="d-total-val">฿0</div>
+          <span class="metric-badge badge-green" id="d-stocks-count">0 หุ้น</span>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">ปันผล/ปี (ก่อนภาษี)</div>
+          <div class="metric-val green" id="d-annual-div">฿0</div>
+          <span class="metric-badge badge-green" id="d-annual-sub">—</span>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">ปันผล/เดือน (หลังภาษี)</div>
+          <div class="metric-val cyan" id="d-monthly-net">฿0</div>
+          <span class="metric-badge" id="d-goal-pct-badge">0% ของเป้า</span>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Yield เฉลี่ย</div>
+          <div class="metric-val amber" id="d-avg-yield">0%</div>
+          <span class="metric-badge" id="d-yield-badge">—</span>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">กำไร / ขาดทุน (ราคาหุ้น)</div>
+          <div class="metric-val" id="d-pl-val" style="color:var(--muted)">฿0</div>
+          <span class="metric-badge" id="d-pl-badge">—</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">สัดส่วนพอร์ต</span></div>
+        <div style="padding:20px;"><div id="d-alloc-bars"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">รายการทั้งหมด</span>
+          <button class="action-btn" onclick="showPage('stocks')">จัดการ →</button>
+        </div>
+        <div id="d-stock-list"></div>
+      </div>
+      <div class="credit">Created by <strong>Kriangkrai Ketraksa · เกรียงไกร เกตุรักษา</strong></div>
+    </div>
+
+    <!-- STOCKS -->
+    <div id="page-stocks" class="page">
+      <div class="page-title">รายการหุ้น</div>
+      <div class="page-sub">เพิ่ม แก้ไข และติดตามหุ้นทุกตัวในพอร์ต</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="openModal()">+ เพิ่มหุ้นใหม่</button>
+        <button class="btn-ghost" onclick="exportData()">↓ Export JSON</button>
+        <label class="btn-ghost" style="cursor:pointer;">↑ Import JSON<input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
+      </div>
+      <div class="card">
+        <div class="table-scroll-wrap" id="stock-table-wrap"></div>
+        <div class="stock-card-list" id="stock-card-list"></div>
+      </div>
+    </div>
+
+    <!-- COMPARE -->
+    <div id="page-compare" class="page">
+      <div class="page-title">เปรียบเทียบหุ้น</div>
+      <div class="page-sub">เปรียบเทียบหุ้นทุกตัวแบบเคียงข้างกัน</div>
+      <div id="compare-wrap"></div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div id="page-calendar" class="page">
+      <div class="page-title">ปฏิทินปันผล</div>
+      <div class="page-sub">คาดการณ์รายรับปันผลรายเดือน</div>
+      <div class="metric-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="metric-card"><div class="metric-label">รวมปีนี้ (ประมาณ)</div><div class="metric-val green" id="cal-yearly">฿0</div></div>
+        <div class="metric-card"><div class="metric-label">เดือนสูงสุด</div><div class="metric-val cyan" id="cal-best-month">—</div></div>
+        <div class="metric-card"><div class="metric-label">เดือนที่ไม่มีปันผล</div><div class="metric-val amber" id="cal-dry">0</div></div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <div class="cal-grid" id="cal-grid"></div>
+        <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;" id="cal-legend"></div>
+      </div>
+    </div>
+
+    <!-- CALCULATOR -->
+    <div id="page-calculator" class="page">
+      <div class="page-title">คำนวณเงินต้น</div>
+      <div class="page-sub">คำนวณว่าต้องลงทุนเท่าไหร่เพื่อได้รายได้ตามที่ต้องการ</div>
+      <div class="calc-layout">
+        <div>
+          <div class="card" style="padding:24px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;">เป้าหมายรายได้</div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label>รายได้ที่ต้องการ / เดือน (บาท)</label>
+              <div class="range-combo">
+                <input type="range" id="r-target" min="1000" max="300000" step="500" value="10000">
+                <input type="number" class="range-num" id="n-target" value="10000" min="1000" max="300000">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+              <label>Dividend Yield (%/ปี)</label>
+              <div class="range-combo">
+                <input type="range" id="r-yield" min="1" max="15" step="0.5" value="5">
+                <input type="number" class="range-num" id="n-yield" value="5" min="1" max="15" step="0.5">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+              <label>ภาษีปันผล (%)</label>
+              <div class="range-combo">
+                <input type="range" id="r-tax" min="0" max="30" step="1" value="10">
+                <input type="number" class="range-num" id="n-tax" value="10" min="0" max="30">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+              <label>ความถี่จ่ายปันผล</label>
+              <select id="c-freq" onchange="calcUpdate()">
+                <option value="12">รายเดือน (12 ครั้ง/ปี)</option>
+                <option value="4">รายไตรมาส (4 ครั้ง/ปี)</option>
+                <option value="2">ราย 6 เดือน (2 ครั้ง/ปี)</option>
+                <option value="1">รายปี (1 ครั้ง/ปี)</option>
+              </select>
+            </div>
+
+            <hr style="margin:20px 0 16px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;">วางแผนการออม</div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label>เงินต้นที่มีอยู่แล้ว / เริ่มต้น (บาท)</label>
+              <input type="number" id="c-existing" value="100000" placeholder="0" oninput="calcUpdate()">
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label>ออมเพิ่ม / เดือน (บาท)</label>
+              <input type="number" id="p-save" value="5000" oninput="planUpdate()">
+            </div>
+            <div class="form-group">
+              <label>นำปันผลกลับลงทุน? (DRIP)</label>
+              <select id="p-reinvest" onchange="planUpdate()">
+                <option value="1">ใช่</option>
+                <option value="0">ไม่</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="calc-result-box">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;">เงินต้นที่ต้องการทั้งหมด</div>
+            <div style="font-size:30px;font-weight:600;font-family:var(--mono);color:var(--accent);margin-bottom:4px;" id="c-principal">฿0</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">ที่ yield และภาษีที่เลือก</div>
+            <div class="calc-result-row"><span class="key">ยังต้องหาเพิ่ม</span><span class="val td-amber" id="c-need-more">—</span></div>
+            <div class="calc-result-row"><span class="key">ปันผล/ปี (ก่อนภาษี)</span><span class="val" id="c-gross-yr">—</span></div>
+            <div class="calc-result-row"><span class="key">ภาษีที่เสีย/ปี</span><span class="val td-red" id="c-tax-yr">—</span></div>
+            <div class="calc-result-row"><span class="key">ปันผล/ปี (หลังภาษี)</span><span class="val td-green" id="c-net-yr">—</span></div>
+            <div class="calc-result-row"><span class="key">ปันผล/เดือน (หลังภาษี)</span><span class="val td-cyan" id="c-net-mo">—</span></div>
+            <hr style="margin:12px 0;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.6px;">เปรียบเทียบ Yield</div>
+            <div id="c-yield-table"></div>
+          </div>
+
+          <div class="calc-result-box">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px;">📈 แผนการออม</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+              <div style="text-align:center;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">ถึงเป้าปีที่</div>
+                <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:var(--accent);" id="p-year">—</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">เงินต้น ณ จุดนั้น</div>
+                <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:var(--accent2);" id="p-cap">—</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">รวมเงินที่ออม</div>
+                <div style="font-size:20px;font-weight:600;font-family:var(--mono);color:var(--accent3);" id="p-total-saved">—</div>
+              </div>
+            </div>
+            <div id="p-bars"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="page-settings" class="page">
+      <div class="page-title">ตั้งค่า</div>
+      <div class="page-sub">ปรับค่าเริ่มต้นและเป้าหมายของคุณ</div>
+      <div class="card" style="padding:24px;max-width:480px;">
+        <div style="font-size:13px;font-weight:500;margin-bottom:16px;">เป้าหมายรายได้</div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label>รายได้ปันผลเป้าหมาย / เดือน (บาท)</label>
+          <input type="number" id="s-goal" value="10000" oninput="saveSettings()">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label>ภาษีปันผลที่ใช้คำนวณ (%)</label>
+          <input type="number" id="s-tax" value="10" min="0" max="30" oninput="saveSettings()">
+        </div>
+        <div class="form-group" style="margin-bottom:24px;">
+          <label>สกุลเงิน</label>
+          <select id="s-currency" onchange="saveSettings()">
+            <option value="฿">บาท (฿)</option>
+            <option value="$">ดอลลาร์ ($)</option>
+            <option value="€">ยูโร (€)</option>
+          </select>
+        </div>
+        <hr>
+        <div style="font-size:13px;font-weight:500;margin:16px 0;">ข้อมูล</div>
+        <button class="btn-ghost" onclick="clearAll()" style="color:var(--accent4);border-color:rgba(248,113,113,.3);">🗑 ลบข้อมูลทั้งหมด</button>
+      </div>
+      <div class="credit" style="max-width:480px;">Created by <strong>Kriangkrai Ketraksa · เกรียงไกร เกตุรักษา</strong></div>
+    </div>
+
+  </main>
 </div>
 
-<div class="card">
-  <div class="card-inner">
-
-    <!-- Name -->
-    <div class="section-label">ชื่อ-นามสกุล</div>
-    <div class="name-row">
-      <div class="name-input-wrap">
-        <input type="text" id="signerName" placeholder="กรอกชื่อของคุณ" autocomplete="off">
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tab-row">
-      <button class="tab-btn active" onclick="switchTab('draw', this)">✏️ วาดลายเซ็น</button>
-      <button class="tab-btn" onclick="switchTab('upload', this)">🖼️ อัปโหลดภาพ</button>
-    </div>
-
-    <!-- Draw Panel -->
-    <div class="tab-panel active" id="panel-draw">
-      <div class="canvas-wrap" id="canvasWrap">
-        <canvas id="sigCanvas" height="220"></canvas>
-      </div>
-      <div class="tools-row">
-        <span class="tool-label">สี</span>
-        <div class="color-swatches">
-          <div class="swatch active" style="background:#1a1a2e" data-color="#1a1a2e" onclick="setColor(this)"></div>
-          <div class="swatch" style="background:#8b0000" data-color="#8b0000" onclick="setColor(this)"></div>
-          <div class="swatch" style="background:#1a3a6e" data-color="#1a3a6e" onclick="setColor(this)"></div>
-          <div class="swatch" style="background:#2d4a1e" data-color="#2d4a1e" onclick="setColor(this)"></div>
-          <div class="swatch" style="background:#4a1a4a" data-color="#4a1a4a" onclick="setColor(this)"></div>
-        </div>
-        <span class="tool-label" style="margin-left:8px">ขนาด</span>
-        <div class="size-btns">
-          <button class="size-btn s1" onclick="setSize(1.5, this)"><span></span></button>
-          <button class="size-btn s2 active" onclick="setSize(2.5, this)"><span></span></button>
-          <button class="size-btn s3" onclick="setSize(4, this)"><span></span></button>
-        </div>
-        <div class="spacer"></div>
-        <button class="clear-btn" onclick="clearCanvas()">ล้าง</button>
-      </div>
-    </div>
-
-    <!-- Upload Panel -->
-    <div class="tab-panel" id="panel-upload">
-      <div class="upload-area" id="uploadArea">
-        <input type="file" id="fileInput" accept="image/*" onchange="handleUpload(event)">
-        <div class="upload-icon">📎</div>
-        <p>คลิกเพื่อเลือกภาพลายเซ็น<br><span style="opacity:0.6;font-size:0.75rem">PNG, JPG, GIF · ขนาดไม่เกิน 5MB</span></p>
-        <img class="upload-preview" id="uploadPreview" alt="preview">
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Actions -->
-    <div class="actions">
-      <button class="btn btn-primary" onclick="saveToGallery()">
-        💾 บันทึกลง Drive
-      </button>
-      <button class="btn btn-secondary" onclick="downloadPNG()">
-        ⬇️ Save as PNG
-      </button>
-      <button class="btn btn-outline" onclick="clearAll()">
-        ✕ เริ่มใหม่
-      </button>
-    </div>
-
+<!-- Mobile Bottom Nav -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <button class="mobile-nav-btn active" data-page="dashboard">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>ภาพรวม
+    </button>
+    <button class="mobile-nav-btn" data-page="stocks">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>หุ้น
+    </button>
+    <button class="mobile-nav-btn" data-page="calendar">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>ปฏิทิน
+    </button>
+    <button class="mobile-nav-btn" data-page="calculator">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>คำนวณ
+    </button>
+    <button class="mobile-nav-btn" data-page="settings">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>ตั้งค่า
+    </button>
   </div>
-</div>
+</nav>
 
-<!-- Gallery -->
-<div class="gallery-section">
-  <div class="gallery-header">
-    <h2>Drive ของฉัน</h2>
-    <span class="count-badge" id="countBadge">0 รายการ</span>
-  </div>
-  <div class="gallery-grid" id="gallery">
-    <div class="empty-gallery" id="emptyMsg">ยังไม่มีลายเซ็นที่บันทึก</div>
+<!-- Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">เพิ่มหุ้นใหม่</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>ชื่อย่อหุ้น (Ticker) *</label>
+        <input type="text" id="f-ticker" placeholder="เช่น INTUCH, SCB" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label>ชื่อเต็มบริษัท</label>
+        <input type="text" id="f-name" placeholder="เช่น Intouch Holdings">
+      </div>
+      <div class="form-group">
+        <label>จำนวนหุ้น (หุ้น) *</label>
+        <input type="number" id="f-shares" placeholder="1000" min="0">
+      </div>
+      <div class="form-group">
+        <label>ราคาต้นทุน / หุ้น (บาท) *</label>
+        <input type="number" id="f-cost" placeholder="50.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>ราคาตลาดปัจจุบัน / หุ้น</label>
+        <input type="number" id="f-price" placeholder="55.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>ปันผล / หุ้น / ปี (บาท) * <span style="color:var(--muted);font-size:10px;text-transform:none;">(ใส่ 0 ถ้าไม่มี)</span></label>
+        <input type="number" id="f-div" placeholder="2.50" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>หมวดอุตสาหกรรม</label>
+        <select id="f-sector">
+          <option value="การเงิน">การเงิน / ธนาคาร</option>
+          <option value="พลังงาน">พลังงาน</option>
+          <option value="อสังหา">อสังหาริมทรัพย์ / REIT</option>
+          <option value="สื่อสาร">สื่อสาร / เทคโนโลยี</option>
+          <option value="อาหาร">อาหาร / เครื่องดื่ม</option>
+          <option value="การค้า">การค้า / ค้าปลีก</option>
+          <option value="อุตสาหกรรม">อุตสาหกรรม</option>
+          <option value="สาธารณูปโภค">สาธารณูปโภค</option>
+          <option value="อื่นๆ">อื่นๆ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>เดือนที่จ่ายปันผล (คั่นด้วย ,)</label>
+        <input type="text" id="f-months" placeholder="เช่น 3,9 หรือ 3,6,9,12">
+      </div>
+      <div class="form-group full">
+        <label>หมายเหตุ</label>
+        <textarea id="f-note" rows="2" placeholder="หมายเหตุ..."></textarea>
+      </div>
+    </div>
+    <div id="f-preview" style="background:var(--bg3);border-radius:var(--r);padding:14px;font-size:12px;margin-bottom:16px;display:none;">
+      <div style="display:flex;gap:20px;flex-wrap:wrap;">
+        <div>มูลค่า: <strong id="pv-val" style="font-family:var(--mono);color:var(--accent)">—</strong></div>
+        <div>ปันผล/ปี: <strong id="pv-div" style="font-family:var(--mono);color:var(--accent2)">—</strong></div>
+        <div>Yield: <strong id="pv-yield" style="font-family:var(--mono);color:var(--accent3)">—</strong></div>
+        <div>กำไร/ขาดทุน: <strong id="pv-pl" style="font-family:var(--mono)">—</strong></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn-primary" onclick="saveStock()">บันทึก</button>
+    </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<footer style="margin-top:40px;text-align:center;font-size:0.7rem;letter-spacing:0.12em;color:rgba(245,240,232,0.22);font-family:'Sarabun',sans-serif;">
-  Created by <span style="color:rgba(201,168,76,0.5)">Kriangkrai Ketraksa</span> &nbsp;·&nbsp; เกรียงไกร เกตุรักษา
-</footer>
-
 <script>
-// ---- Canvas Setup ----
-const canvas = document.getElementById('sigCanvas');
-const ctx = canvas.getContext('2d');
-const wrap = document.getElementById('canvasWrap');
-let drawing = false, lastX = 0, lastY = 0;
-let penColor = '#1a1a2e', penSize = 2.5;
-let hasStrokes = false;
+// ===== STATE =====
+let stocks   = JSON.parse(localStorage.getItem('div_stocks')   || '[]');
+let settings = JSON.parse(localStorage.getItem('div_settings') || '{"goal":10000,"tax":10,"currency":"฿"}');
+let editingId = null;
 
-function resizeCanvas() {
-  const w = wrap.clientWidth;
-  const ratio = window.devicePixelRatio || 1;
-  const imgData = canvas.width ? ctx.getImageData(0, 0, canvas.width, canvas.height) : null;
-  canvas.width = w * ratio;
-  canvas.height = 220 * ratio;
-  canvas.style.width = w + 'px';
-  canvas.style.height = '220px';
-  ctx.scale(ratio, ratio);
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  if (imgData) ctx.putImageData(imgData, 0, 0);
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+const COLORS = ['#4ade80','#22d3ee','#f59e0b','#a78bfa','#f87171','#34d399','#60a5fa','#fb923c','#e879f9','#a3e635'];
+const MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-function getPos(e) {
-  const r = canvas.getBoundingClientRect();
-  const src = e.touches ? e.touches[0] : e;
-  return { x: src.clientX - r.left, y: src.clientY - r.top };
-}
+function fmt(n){return Math.round(n).toLocaleString('th-TH');}
+function fmtD(n){return Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtM(n){if(Math.abs(n)>=1e6)return(n/1e6).toFixed(2)+'M';return fmt(n);}
+function cur(){return settings.currency||'฿';}
+function save(){localStorage.setItem('div_stocks',JSON.stringify(stocks));}
 
-function startDraw(e) {
-  e.preventDefault();
-  drawing = true;
-  const p = getPos(e);
-  lastX = p.x; lastY = p.y;
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, penSize / 2, 0, Math.PI * 2);
-  ctx.fillStyle = penColor;
-  ctx.fill();
-}
+// ===== RANGE ↔ NUMBER SYNC =====
+// pairs: [rangeId, numberId]
+const RANGE_PAIRS = [
+  ['r-target','n-target'],
+  ['r-yield', 'n-yield'],
+  ['r-tax',   'n-tax'],
+];
+RANGE_PAIRS.forEach(([rid,nid])=>{
+  const r = document.getElementById(rid);
+  const n = document.getElementById(nid);
+  if(!r||!n) return;
+  r.addEventListener('input',()=>{ n.value = r.value; calcUpdate(); });
+  n.addEventListener('input',()=>{
+    let v = parseFloat(n.value);
+    if(isNaN(v)) return;
+    v = Math.max(parseFloat(r.min), Math.min(parseFloat(r.max), v));
+    r.value = v;
+    calcUpdate();
+  });
+});
 
-function draw(e) {
-  if (!drawing) return;
-  e.preventDefault();
-  const p = getPos(e);
-  ctx.beginPath();
-  ctx.moveTo(lastX, lastY);
-  ctx.lineTo(p.x, p.y);
-  ctx.strokeStyle = penColor;
-  ctx.lineWidth = penSize;
-  ctx.stroke();
-  lastX = p.x; lastY = p.y;
-  if (!hasStrokes) { hasStrokes = true; wrap.classList.add('has-strokes'); }
+// ===== NAVIGATION =====
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item[data-page]').forEach(el=>
+    el.classList.toggle('active', el.dataset.page===id)
+  );
+  document.querySelectorAll('.mobile-nav-btn[data-page]').forEach(el=>
+    el.classList.toggle('active', el.dataset.page===id)
+  );
+  closeDrawer();
+  renderAll();
 }
 
-function endDraw() { drawing = false; }
+// Wire all nav items (sidebar + mobile)
+document.querySelectorAll('[data-page]').forEach(el=>{
+  el.addEventListener('click', ()=> showPage(el.dataset.page));
+});
 
-canvas.addEventListener('mousedown', startDraw);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', endDraw);
-canvas.addEventListener('mouseleave', endDraw);
-canvas.addEventListener('touchstart', startDraw, { passive: false });
-canvas.addEventListener('touchmove', draw, { passive: false });
-canvas.addEventListener('touchend', endDraw);
+// ===== DRAWER =====
+function openDrawer(){
+  document.getElementById('sidebar').classList.add('drawer-open');
+  document.getElementById('drawer-overlay').classList.add('open');
+}
+function closeDrawer(){
+  document.getElementById('sidebar').classList.remove('drawer-open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+document.getElementById('burger-btn').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.contains('drawer-open') ? closeDrawer() : openDrawer();
+});
+document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
 
-function setColor(el) {
-  penColor = el.dataset.color;
-  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-  el.classList.add('active');
+// ===== SETTINGS =====
+function saveSettings(){
+  settings.goal     = +document.getElementById('s-goal').value     || 10000;
+  settings.tax      = +document.getElementById('s-tax').value      || 10;
+  settings.currency = document.getElementById('s-currency').value;
+  localStorage.setItem('div_settings',JSON.stringify(settings));
+  renderAll(); toast('บันทึกแล้ว ✓');
+}
+function initSettings(){
+  document.getElementById('s-goal').value     = settings.goal;
+  document.getElementById('s-tax').value      = settings.tax;
+  document.getElementById('s-currency').value = settings.currency||'฿';
 }
 
-function setSize(s, el) {
-  penSize = s;
-  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
+// ===== MODAL =====
+function openModal(id=null){
+  editingId = id;
+  document.getElementById('modal-title').textContent = id?'แก้ไขหุ้น':'เพิ่มหุ้นใหม่';
+  const s = id ? stocks.find(x=>x.id===id) : {};
+  document.getElementById('f-ticker').value  = s.ticker  || '';
+  document.getElementById('f-name').value    = s.name    || '';
+  document.getElementById('f-shares').value  = s.shares  || '';
+  document.getElementById('f-cost').value    = s.cost    || '';
+  document.getElementById('f-price').value   = s.price   || '';
+  document.getElementById('f-div').value     = (s.div !== undefined && s.div !== null) ? s.div : '';
+  document.getElementById('f-sector').value  = s.sector  || 'การเงิน';
+  document.getElementById('f-months').value  = s.months  || '';
+  document.getElementById('f-note').value    = s.note    || '';
+  document.getElementById('f-preview').style.display = 'none';
+  document.getElementById('modal').classList.add('open');
+  ['f-shares','f-cost','f-price','f-div'].forEach(fid=>{
+    const el = document.getElementById(fid);
+    el.removeEventListener('input',previewCalc);
+    el.addEventListener('input',previewCalc);
+  });
+  document.getElementById('f-ticker').focus();
 }
-
-function clearCanvas() {
-  const ratio = window.devicePixelRatio || 1;
-  ctx.clearRect(0, 0, canvas.width / ratio, canvas.height / ratio);
-  hasStrokes = false;
-  wrap.classList.remove('has-strokes');
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+  editingId = null;
 }
-
-// ---- Tabs ----
-let activeTab = 'draw';
-function switchTab(tab, btn) {
-  activeTab = tab;
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('panel-' + tab).classList.add('active');
-  btn.classList.add('active');
-  if (tab === 'draw') setTimeout(resizeCanvas, 50);
+function previewCalc(){
+  const shares = +document.getElementById('f-shares').value;
+  const cost   = +document.getElementById('f-cost').value;
+  const price  = +document.getElementById('f-price').value || cost;
+  const divVal = +document.getElementById('f-div').value || 0;
+  if(!shares||!cost) return;
+  const val  = shares*price;
+  const dYr  = shares*divVal;
+  const yld  = price>0 ? divVal/price*100 : 0;
+  const pl   = (price-cost)*shares;
+  document.getElementById('f-preview').style.display='block';
+  document.getElementById('pv-val').textContent   = cur()+fmt(val);
+  document.getElementById('pv-div').textContent   = divVal>0 ? cur()+fmt(dYr) : 'ไม่มีปันผล';
+  document.getElementById('pv-yield').textContent = divVal>0 ? yld.toFixed(2)+'%' : '—';
+  document.getElementById('pv-pl').textContent    = (pl>=0?'+':'')+cur()+fmt(pl);
+  document.getElementById('pv-pl').style.color    = pl>=0?'var(--accent)':'var(--accent4)';
 }
-
-// ---- Upload ----
-let uploadedDataURL = null;
-function handleUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { showToast('ไฟล์ใหญ่เกิน 5MB'); return; }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    uploadedDataURL = ev.target.result;
-    const prev = document.getElementById('uploadPreview');
-    prev.src = uploadedDataURL;
-    prev.style.display = 'block';
-    document.querySelector('#uploadArea p').style.opacity = '0.4';
+function saveStock(){
+  const ticker  = document.getElementById('f-ticker').value.trim().toUpperCase();
+  const shares  = +document.getElementById('f-shares').value;
+  const cost    = +document.getElementById('f-cost').value;
+  const divRaw  = document.getElementById('f-div').value;
+  if(!ticker||!shares||!cost||divRaw===''){toast('กรุณากรอกข้อมูลที่จำเป็น *');return;}
+  const divVal = +divRaw;
+  const stock = {
+    id:      editingId || Date.now().toString(),
+    ticker, shares, cost, div: divVal,
+    name:    document.getElementById('f-name').value.trim(),
+    price:   +document.getElementById('f-price').value || cost,
+    sector:  document.getElementById('f-sector').value,
+    months:  document.getElementById('f-months').value.trim(),
+    note:    document.getElementById('f-note').value.trim(),
+    addedAt: editingId?(stocks.find(x=>x.id===editingId)?.addedAt||Date.now()):Date.now()
   };
-  reader.readAsDataURL(file);
+  if(editingId){const i=stocks.findIndex(x=>x.id===editingId);stocks[i]=stock;}
+  else stocks.push(stock);
+  save(); closeModal(); renderAll();
+  toast(editingId?'แก้ไขสำเร็จ ✓':'เพิ่มหุ้นสำเร็จ ✓');
+}
+function deleteStock(id){
+  if(!confirm('ต้องการลบหุ้นนี้?')) return;
+  stocks=stocks.filter(x=>x.id!==id); save(); renderAll(); toast('ลบแล้ว');
 }
 
-// ---- Get current signature as transparent PNG ----
-function getSignatureDataURL() {
-  if (activeTab === 'draw') {
-    if (!hasStrokes) { showToast('กรุณาเซ็นชื่อก่อน'); return null; }
-    // Render on transparent canvas
-    const ratio = window.devicePixelRatio || 1;
-    const out = document.createElement('canvas');
-    out.width = canvas.width;
-    out.height = canvas.height;
-    const oc = out.getContext('2d');
-    oc.drawImage(canvas, 0, 0);
-    return out.toDataURL('image/png');
-  } else {
-    if (!uploadedDataURL) { showToast('กรุณาเลือกภาพก่อน'); return null; }
-    return uploadedDataURL;
-  }
+// ===== RENDER ALL =====
+function renderAll(){
+  renderDashboard(); renderStockTable(); renderCompare(); renderCalendar(); calcUpdate(); updateSidebar();
 }
 
-// ---- Download PNG ----
-function downloadPNG() {
-  const dataURL = getSignatureDataURL();
-  if (!dataURL) return;
-  const name = (document.getElementById('signerName').value.trim() || 'signature');
-  const a = document.createElement('a');
-  a.href = dataURL;
-  a.download = name.replace(/\s+/g, '_') + '_signature.png';
-  a.click();
-  showToast('ดาวน์โหลดแล้ว ✓');
-}
+// ===== DASHBOARD =====
+function renderDashboard(){
+  const taxR   = settings.tax/100;
+  const totVal = stocks.reduce((s,x)=>s+x.shares*(x.price||x.cost),0);
+  const annDiv = stocks.reduce((s,x)=>s+x.shares*x.div,0);
+  const netMo  = annDiv*(1-taxR)/12;
+  const avgYld = totVal>0 ? annDiv/totVal*100 : 0;
+  const totPL  = stocks.reduce((s,x)=>s+(x.price-x.cost)*x.shares,0);
+  const totCost= stocks.reduce((s,x)=>s+x.cost*x.shares,0);
+  const plPct  = totCost>0 ? totPL/totCost*100 : 0;
 
-// ---- Local "Drive" Storage ----
-const STORAGE_KEY = 'signature_drive_v1';
+  document.getElementById('d-total-val').textContent   = cur()+fmtM(totVal);
+  document.getElementById('d-stocks-count').textContent= stocks.length+' หุ้น';
+  document.getElementById('d-annual-div').textContent  = cur()+fmtM(annDiv);
+  document.getElementById('d-annual-sub').textContent  = cur()+fmt(annDiv*(1-taxR))+' หลังภาษี';
+  document.getElementById('d-monthly-net').textContent = cur()+fmt(netMo);
+  document.getElementById('dash-date').textContent     = new Date().toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
-function loadGallery() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
-}
+  const pct = settings.goal>0 ? Math.round(netMo/settings.goal*100) : 0;
+  const gpb = document.getElementById('d-goal-pct-badge');
+  gpb.textContent = pct+'% ของเป้า';
+  gpb.className   = 'metric-badge '+(pct>=100?'badge-green':pct>=50?'badge-amber':'badge-red');
 
-function saveGallery(items) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-}
+  document.getElementById('d-avg-yield').textContent = avgYld.toFixed(2)+'%';
+  const yb = document.getElementById('d-yield-badge');
+  yb.textContent = avgYld<3?'ต่ำ':avgYld<6?'ปานกลาง':avgYld<9?'สูง':'สูงมาก';
+  yb.className   = 'metric-badge '+(avgYld<3?'badge-cyan':avgYld<6?'badge-green':avgYld<9?'badge-amber':'badge-red');
 
-function saveToGallery() {
-  const dataURL = getSignatureDataURL();
-  if (!dataURL) return;
-  const name = document.getElementById('signerName').value.trim() || 'ไม่ระบุชื่อ';
-  const items = loadGallery();
-  const id = Date.now().toString();
-  items.unshift({ id, name, dataURL, date: new Date().toLocaleDateString('th-TH') });
-  saveGallery(items);
-  renderGallery();
-  showToast('บันทึกลง Drive แล้ว ✓');
-}
+  const plEl = document.getElementById('d-pl-val');
+  plEl.textContent = (totPL>=0?'+':'')+cur()+fmtM(totPL);
+  plEl.style.color = totPL>0?'var(--accent)':totPL<0?'var(--accent4)':'var(--muted)';
+  const pb = document.getElementById('d-pl-badge');
+  pb.textContent = (plPct>=0?'+':'')+plPct.toFixed(2)+'%';
+  pb.className   = 'metric-badge '+(totPL>0?'badge-green':totPL<0?'badge-red':'badge-amber');
 
-function deleteItem(id) {
-  let items = loadGallery().filter(i => i.id !== id);
-  saveGallery(items);
-  renderGallery();
-  showToast('ลบแล้ว');
-}
+  // Alloc bars
+  const ab = document.getElementById('d-alloc-bars');
+  if(!stocks.length){ab.innerHTML='<div style="color:var(--muted);font-size:13px;">ยังไม่มีข้อมูล</div>';return;}
+  ab.innerHTML = stocks.map((s,i)=>{
+    const val=s.shares*(s.price||s.cost);
+    const p=totVal>0?val/totVal*100:0;
+    return `<div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+        <span><span style="color:${COLORS[i%10]};margin-right:6px;">●</span>${s.ticker}${s.name?' · '+s.name:''}</span>
+        <span style="font-family:var(--mono);color:var(--muted)">${p.toFixed(1)}% · ${cur()}${fmt(val)}</span>
+      </div>
+      <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${p}%;background:${COLORS[i%10]};border-radius:3px;"></div>
+      </div>
+    </div>`;
+  }).join('');
 
-function downloadItem(id) {
-  const item = loadGallery().find(i => i.id === id);
-  if (!item) return;
-  const a = document.createElement('a');
-  a.href = item.dataURL;
-  a.download = (item.name || 'signature').replace(/\s+/g, '_') + '_signature.png';
-  a.click();
-}
-
-function renderGallery() {
-  const items = loadGallery();
-  const grid = document.getElementById('gallery');
-  const badge = document.getElementById('countBadge');
-  const empty = document.getElementById('emptyMsg');
-  badge.textContent = items.length + ' รายการ';
-
-  const cards = grid.querySelectorAll('.gallery-item');
-  cards.forEach(c => c.remove());
-
-  if (items.length === 0) {
-    empty.style.display = 'block';
+  const ld = document.getElementById('d-stock-list');
+  if(!stocks.length){
+    ld.innerHTML='<div style="text-align:center;padding:48px 20px;color:var(--muted);"><div style="font-size:36px;margin-bottom:10px;opacity:.4;">📊</div><div style="font-size:15px;font-weight:500;color:var(--text);">ยังไม่มีหุ้น</div><p>เพิ่มหุ้นในเมนู "รายการหุ้น"</p></div>';
     return;
   }
-  empty.style.display = 'none';
+  ld.innerHTML=`<div class="table-scroll-wrap"><table><thead><tr>
+    <th>หุ้น</th><th>หมวด</th><th class="num">จำนวน</th>
+    <th class="num">มูลค่าพอร์ต</th><th class="num">ปันผล/ปี</th>
+    <th class="num">Yield</th><th class="num">กำไร/ขาดทุน</th>
+  </tr></thead><tbody>`+
+  stocks.map((s,i)=>{
+    const mp=s.price||s.cost;const val=s.shares*mp;
+    const dY=s.shares*s.div;const yld=mp>0?s.div/mp*100:0;
+    const pl=(mp-s.cost)*s.shares;const hd=s.div>0;
+    return`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${COLORS[i%10]};flex-shrink:0;"></span>
+        <div><div class="stock-name">${s.ticker}</div>${s.name?`<div class="stock-full">${s.name}</div>`:''}</div>
+      </div></td>
+      <td><span style="font-size:11px;color:var(--muted)">${s.sector||'—'}</span></td>
+      <td class="td-num">${fmt(s.shares)}</td>
+      <td class="td-num">${cur()}${fmt(val)}</td>
+      <td class="td-num td-green">${hd?cur()+fmtD(dY):'<span style="color:var(--muted)">—</span>'}</td>
+      <td class="td-num"><span class="${hd&&yld>=6?'td-amber':hd?'td-green':''}">${hd?yld.toFixed(2)+'%':'—'}</span></td>
+      <td class="td-num ${pl>=0?'td-green':'td-red'}">${pl>=0?'+':''}${cur()}${fmt(pl)}</td>
+    </tr>`;
+  }).join('')+'</tbody></table></div>';
+}
 
-  items.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'gallery-item';
-    div.innerHTML = `
-      <img src="${item.dataURL}" alt="${item.name}">
-      <div class="gi-info">
-        <div class="gi-name">${item.name}</div>
-        <div class="gi-date">${item.date}</div>
+// ===== STOCK TABLE =====
+function renderStockTable(){
+  const wrap=document.getElementById('stock-table-wrap');
+  const cList=document.getElementById('stock-card-list');
+  const taxR=settings.tax/100;
+  const EMPTY=`<div style="text-align:center;padding:60px 20px;color:var(--muted);"><div style="font-size:38px;margin-bottom:10px;opacity:.4;">🌱</div><div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:4px;">เริ่มสร้างพอร์ตปันผล</div><p>กดปุ่ม "เพิ่มหุ้นใหม่" เพื่อเริ่มต้น</p></div>`;
+  if(!stocks.length){wrap.innerHTML=cList.innerHTML=EMPTY;return;}
+
+  // Desktop
+  const totVal=stocks.reduce((s,x)=>s+x.shares*(x.price||x.cost),0);
+  const totDiv=stocks.reduce((s,x)=>s+x.shares*x.div,0);
+  const totYld=totVal>0?totDiv/totVal*100:0;
+  const totNet=totDiv*(1-taxR)/12;
+  wrap.innerHTML=`<table><thead><tr>
+    <th>หุ้น</th><th>หมวด</th>
+    <th class="num">จำนวน</th><th class="num">ต้นทุน/หุ้น</th><th class="num">ราคาตลาด</th>
+    <th class="num">มูลค่าพอร์ต</th><th class="num">ปันผล/หุ้น/ปี</th>
+    <th class="num">ปันผล/ปี</th><th class="num">Yield</th>
+    <th class="num">สุทธิ/เดือน</th><th class="num">กำไร/ขาดทุน</th>
+    <th>เดือนจ่าย</th><th>จัดการ</th>
+  </tr></thead><tbody>`+
+  stocks.map((s,i)=>{
+    const mp=s.price||s.cost;const val=s.shares*mp;
+    const dYr=s.shares*s.div;const dMo=dYr*(1-taxR)/12;
+    const yld=mp>0?s.div/mp*100:0;
+    const pl=(mp-s.cost)*s.shares;const pp=s.cost>0?(mp-s.cost)/s.cost*100:0;
+    const hd=s.div>0;
+    return`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${COLORS[i%10]};flex-shrink:0;"></span>
+        <div><div class="stock-name">${s.ticker}</div>${s.name?`<div class="stock-full">${s.name}</div>`:''}</div>
+      </div></td>
+      <td><span style="font-size:11px;color:var(--muted)">${s.sector||'—'}</span></td>
+      <td class="td-num">${fmt(s.shares)}</td>
+      <td class="td-num">${cur()}${fmtD(s.cost)}</td>
+      <td class="td-num">${cur()}${fmtD(mp)}</td>
+      <td class="td-num">${cur()}${fmt(val)}</td>
+      <td class="td-num">${hd?cur()+fmtD(s.div):'<span style="color:var(--muted)">—</span>'}</td>
+      <td class="td-num td-green">${hd?cur()+fmt(dYr):'<span style="color:var(--muted)">—</span>'}</td>
+      <td class="td-num"><span class="${hd&&yld>=6?'td-amber':hd?'td-green':''}">${hd?yld.toFixed(2)+'%':'—'}</span></td>
+      <td class="td-num td-cyan">${hd?cur()+fmtD(dMo):'<span style="color:var(--muted)">—</span>'}</td>
+      <td class="td-num ${pl>=0?'td-green':'td-red'}">${pl>=0?'+':''}${cur()}${fmt(pl)}<br><span style="font-size:10px;">(${pp>=0?'+':''}${pp.toFixed(1)}%)</span></td>
+      <td style="font-size:11px;font-family:var(--mono);color:var(--muted);">${s.months||'—'}</td>
+      <td><div class="btn-row">
+        <button class="action-btn" onclick="openModal('${s.id}')">แก้ไข</button>
+        <button class="action-btn danger" onclick="deleteStock('${s.id}')">ลบ</button>
+      </div></td>
+    </tr>`;
+  }).join('')+`</tbody><tfoot><tr>
+    <td colspan="5" style="padding:12px 14px;font-size:12px;color:var(--muted);">รวม (${stocks.length} หุ้น)</td>
+    <td class="td-num" style="font-weight:600;">${cur()}${fmt(totVal)}</td>
+    <td></td>
+    <td class="td-num td-green" style="font-weight:600;">${cur()}${fmt(totDiv)}</td>
+    <td class="td-num td-amber" style="font-weight:600;">${totYld.toFixed(2)}%</td>
+    <td class="td-num td-cyan" style="font-weight:600;">${cur()}${fmtD(totNet)}</td>
+    <td colspan="3"></td>
+  </tr></tfoot></table>`;
+
+  // Mobile cards
+  cList.innerHTML=stocks.map((s,i)=>{
+    const mp=s.price||s.cost;const val=s.shares*mp;
+    const dYr=s.shares*s.div;const dMo=dYr*(1-taxR)/12;
+    const yld=mp>0?s.div/mp*100:0;
+    const pl=(mp-s.cost)*s.shares;const hd=s.div>0;
+    return`<div class="stock-card-item">
+      <div class="scard-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:10px;height:10px;border-radius:50%;background:${COLORS[i%10]};flex-shrink:0;"></span>
+          <div><div class="stock-name" style="font-size:15px;">${s.ticker}</div>${s.name?`<div class="stock-full">${s.name}</div>`:''}</div>
+        </div>
+        <span style="font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 8px;border-radius:4px;">${s.sector||'—'}</span>
       </div>
-      <div class="gi-actions">
-        <button class="gi-btn" title="ดาวน์โหลด" onclick="downloadItem('${item.id}')">⬇</button>
-        <button class="gi-btn" title="ลบ" onclick="deleteItem('${item.id}')">✕</button>
+      <div class="scard-body">
+        <div><div class="scard-key">มูลค่าพอร์ต</div><div class="scard-val">${cur()}${fmt(val)}</div></div>
+        <div><div class="scard-key">Yield</div><div class="scard-val" style="color:${hd&&yld>=6?'var(--accent3)':hd?'var(--accent)':'var(--muted)'}">${hd?yld.toFixed(2)+'%':'—'}</div></div>
+        <div><div class="scard-key">ปันผล/ปี</div><div class="scard-val td-green">${hd?cur()+fmt(dYr):'—'}</div></div>
+        <div><div class="scard-key">สุทธิ/เดือน</div><div class="scard-val td-cyan">${hd?cur()+fmtD(dMo):'—'}</div></div>
+        <div><div class="scard-key">ต้นทุน/หุ้น</div><div class="scard-val">${cur()}${fmtD(s.cost)}</div></div>
+        <div><div class="scard-key">กำไร/ขาดทุน</div><div class="scard-val ${pl>=0?'td-green':'td-red'}">${pl>=0?'+':''}${cur()}${fmt(pl)}</div></div>
       </div>
-    `;
-    grid.appendChild(div);
+      <div class="btn-row">
+        <button class="action-btn" style="flex:1;text-align:center;" onclick="openModal('${s.id}')">✏️ แก้ไข</button>
+        <button class="action-btn danger" style="flex:1;text-align:center;" onclick="deleteStock('${s.id}')">🗑 ลบ</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== COMPARE =====
+function renderCompare(){
+  const wrap=document.getElementById('compare-wrap');
+  if(!stocks.length){
+    wrap.innerHTML='<div style="text-align:center;padding:60px 20px;color:var(--muted);"><div style="font-size:36px;opacity:.4;margin-bottom:10px;">⚖️</div><div style="font-size:15px;font-weight:500;color:var(--text);">ยังไม่มีหุ้น</div></div>';
+    return;
+  }
+  const taxR=settings.tax/100;
+  const divS=stocks.filter(s=>s.div>0);
+  const best=divS.length?divS.reduce((a,b)=>b.div/(b.price||b.cost)>a.div/(a.price||a.cost)?b:a,divS[0]):null;
+  wrap.innerHTML=`<div class="compare-grid">`+
+  stocks.map((s,i)=>{
+    const mp=s.price||s.cost;const val=s.shares*mp;
+    const dYr=s.shares*s.div;const yld=mp>0?s.div/mp*100:0;
+    const pl=(mp-s.cost)*s.shares;const hd=s.div>0;
+    const isH=best&&s.id===best.id;
+    return`<div class="compare-card ${isH?'highlight':''}">
+      ${isH?'<div style="font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">★ Yield สูงสุด</div>':''}
+      ${!hd?'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">ไม่มีปันผล</div>':''}
+      <div class="compare-stock-name" style="color:${COLORS[i%10]}">${s.ticker}</div>
+      ${s.name?`<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">${s.name}</div>`:'<div style="margin-bottom:10px;"></div>'}
+      <div class="compare-row"><span class="compare-key">Yield</span><span class="compare-val" style="color:${hd?(yld>=6?'var(--accent3)':'var(--accent)'):'var(--muted)'}">${hd?yld.toFixed(2)+'%':'—'}</span></div>
+      <div class="compare-row"><span class="compare-key">มูลค่าพอร์ต</span><span class="compare-val">${cur()}${fmt(val)}</span></div>
+      <div class="compare-row"><span class="compare-key">ปันผล/ปี</span><span class="compare-val td-green">${hd?cur()+fmt(dYr):'—'}</span></div>
+      <div class="compare-row"><span class="compare-key">สุทธิ/เดือน</span><span class="compare-val td-cyan">${hd?cur()+fmtD(dYr*(1-taxR)/12):'—'}</span></div>
+      <div class="compare-row"><span class="compare-key">ต้นทุน/หุ้น</span><span class="compare-val">${cur()}${fmtD(s.cost)}</span></div>
+      <div class="compare-row"><span class="compare-key">กำไร/ขาดทุน</span><span class="compare-val ${pl>=0?'td-green':'td-red'}">${pl>=0?'+':''}${cur()}${fmt(pl)}</span></div>
+      <div class="compare-row"><span class="compare-key">หมวด</span><span class="compare-val" style="font-size:11px;font-family:var(--font)">${s.sector||'—'}</span></div>
+      <div class="compare-row"><span class="compare-key">เดือนจ่าย</span><span class="compare-val" style="font-size:11px;">${hd&&s.months?s.months:'—'}</span></div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+// ===== CALENDAR =====
+function renderCalendar(){
+  const taxR=settings.tax/100;
+  const monthly=Array(12).fill(0).map(()=>[]);
+  stocks.filter(s=>s.div>0).forEach((s,i)=>{
+    if(!s.months) return;
+    const ms=s.months.split(',').map(m=>parseInt(m.trim())).filter(m=>m>=1&&m<=12);
+    if(!ms.length) return;
+    const amt=s.shares*s.div*(1-taxR)/ms.length;
+    ms.forEach(m=>monthly[m-1].push({ticker:s.ticker,amt,color:COLORS[i%10]}));
   });
+  const totals=monthly.map(m=>m.reduce((s,x)=>s+x.amt,0));
+  document.getElementById('cal-grid').innerHTML=MONTHS_TH.map((mo,i)=>{
+    const items=monthly[i];const total=totals[i];
+    return`<div class="cal-month ${items.length?'has-div':''}">
+      <div class="cal-month-name">${mo}</div>
+      ${items.map(it=>`<span class="cal-chip" style="background:${it.color}22;color:${it.color};">${it.ticker}</span>`).join('')}
+      ${total>0?`<div class="cal-total">${cur()}${fmt(total)}</div>`:''}
+    </div>`;
+  }).join('');
+  document.getElementById('cal-yearly').textContent=cur()+fmt(totals.reduce((a,b)=>a+b,0));
+  const bi=totals.indexOf(Math.max(...totals));
+  document.getElementById('cal-best-month').textContent=Math.max(...totals)>0?MONTHS_TH[bi]+' · '+cur()+fmt(totals[bi]):'—';
+  document.getElementById('cal-dry').textContent=totals.filter(x=>x===0).length+' เดือน';
+  document.getElementById('cal-legend').innerHTML=stocks.filter(s=>s.div>0).map((s,i)=>
+    `<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);">
+      <span style="width:8px;height:8px;border-radius:2px;background:${COLORS[i%10]};display:inline-block;"></span>${s.ticker}
+    </span>`).join('');
 }
 
-function clearAll() {
-  clearCanvas();
-  uploadedDataURL = null;
-  document.getElementById('uploadPreview').style.display = 'none';
-  document.getElementById('fileInput').value = '';
-  document.querySelector('#uploadArea p').style.opacity = '1';
-  document.getElementById('signerName').value = '';
+// ===== CALCULATOR =====
+function calcUpdate(){
+  const target  = +document.getElementById('n-target').value || 0;
+  const yld     = +document.getElementById('n-yield').value  || 0;
+  const tax     = +document.getElementById('n-tax').value    || 0;
+  const existing= +document.getElementById('c-existing').value || 0;
+  const netF    = 1 - tax/100;
+  const grossYr = netF>0 ? target*12/netF : 0;
+  const princip = yld>0  ? grossYr/(yld/100) : 0;
+  const needMore= Math.max(0, princip-existing);
+
+  document.getElementById('c-principal').textContent = cur()+fmtM(princip);
+  document.getElementById('c-need-more').textContent = cur()+fmtM(needMore);
+  document.getElementById('c-gross-yr').textContent  = cur()+fmt(grossYr);
+  document.getElementById('c-tax-yr').textContent    = cur()+fmt(grossYr*tax/100);
+  document.getElementById('c-net-yr').textContent    = cur()+fmt(target*12);
+  document.getElementById('c-net-mo').textContent    = cur()+fmt(target);
+
+  const yields=[3,4,5,6,7,8,10,12];
+  document.getElementById('c-yield-table').innerHTML=yields.map(y=>{
+    const p=netF>0&&y>0?target*12/netF/(y/100):0;
+    const active=Math.abs(y-yld)<0.3;
+    return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;${active?'color:var(--text);font-weight:600;':'color:var(--muted);'}">
+      <span>${y}%</span><span style="font-family:var(--mono)">${cur()}${fmtM(p)}</span>
+    </div>`;
+  }).join('');
+
+  planUpdate();
 }
 
-// ---- Toast ----
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+// ===== PLANNER =====
+function planUpdate(){
+  const seed   = +document.getElementById('c-existing').value || 0;
+  const msave  = +document.getElementById('p-save').value     || 0;
+  const reinv  = +document.getElementById('p-reinvest').value;
+  const yld    = (+document.getElementById('n-yield').value || 0)/100;
+  const tax    = (+document.getElementById('n-tax').value   || 0)/100;
+  const target = +document.getElementById('n-target').value || 0;
+  const needed = yld>0&&(1-tax)>0 ? target*12/((1-tax)*yld) : Infinity;
+
+  let cap=seed, totalSaved=seed, reachYr=null, reachCap=null;
+  const bars=[];
+  for(let yr=1;yr<=30;yr++){
+    if(reinv) cap+=cap*yld;
+    cap+=msave*12; totalSaved+=msave*12;
+    bars.push({yr,cap});
+    if(!reachYr&&cap>=needed){reachYr=yr;reachCap=cap;}
+  }
+  document.getElementById('p-year').textContent       = reachYr?reachYr+' ปี':'>30 ปี';
+  document.getElementById('p-cap').textContent        = reachCap?cur()+fmtM(reachCap):'—';
+  document.getElementById('p-total-saved').textContent= cur()+fmtM(totalSaved);
+
+  const show=bars.slice(0,10);
+  const maxC=Math.max(...show.map(d=>d.cap), isFinite(needed)?needed:1, 1);
+  document.getElementById('p-bars').innerHTML=show.map(d=>{
+    const w=Math.round(d.cap/maxC*100);
+    const gw=isFinite(needed)?Math.min(Math.round(needed/maxC*100),99):99;
+    const isR=d.yr===reachYr;
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+      <span style="font-size:11px;color:var(--muted);width:32px;flex-shrink:0;">ปี ${d.yr}</span>
+      <div style="flex:1;position:relative;">
+        <div style="height:7px;background:var(--bg4);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${w}%;background:${isR?'var(--accent)':'var(--accent2)'};border-radius:4px;"></div>
+        </div>
+        <div style="position:absolute;top:0;left:${gw}%;height:7px;width:2px;background:rgba(245,158,11,.9);"></div>
+      </div>
+      <span style="font-size:11px;font-family:var(--mono);min-width:72px;text-align:right;color:${isR?'var(--accent)':'var(--muted)'};">${cur()}${fmtM(d.cap)}</span>
+      ${isR?'<span class="metric-badge badge-green" style="font-size:10px;">✓</span>':''}
+    </div>`;
+  }).join('');
 }
 
-// ---- Init ----
-renderGallery();
+// ===== SIDEBAR GOAL =====
+function updateSidebar(){
+  const net=stocks.reduce((s,x)=>s+x.shares*x.div,0)*(1-settings.tax/100)/12;
+  const pct=settings.goal>0?Math.min(100,net/settings.goal*100):0;
+  document.getElementById('sidebar-goal-fill').style.width=pct+'%';
+  document.getElementById('sidebar-goal-pct').textContent=cur()+fmt(net)+' / '+cur()+fmt(settings.goal);
+}
+
+// ===== EXPORT / IMPORT =====
+function exportData(){
+  const a=document.createElement('a');
+  a.href='data:application/json,'+encodeURIComponent(JSON.stringify({stocks,settings},null,2));
+  a.download='divtrack-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); toast('Export สำเร็จ ✓');
+}
+function importData(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d.stocks){stocks=d.stocks;save();}
+      if(d.settings){settings=d.settings;localStorage.setItem('div_settings',JSON.stringify(settings));}
+      renderAll(); toast('Import สำเร็จ ✓ ('+stocks.length+' หุ้น)');
+    }catch{toast('ไฟล์ไม่ถูกต้อง');}
+  };
+  r.readAsText(f);
+}
+function clearAll(){
+  if(!confirm('ยืนยันลบข้อมูลทั้งหมด?')) return;
+  stocks=[]; save(); renderAll(); toast('ลบข้อมูลทั้งหมดแล้ว');
+}
+
+// ===== TOAST =====
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ===== INIT =====
+initSettings();
+renderAll();
 </script>
 </body>
 </html>
