@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ลายเซ็นดิจิทัล</title>
+<!--
+  ======================================================
+  Digital Signature App · ลายเซ็นดิจิทัล
+  ======================================================
+  Created by : Kriangkrai Ketraksa (เกรียงไกร เกตุรักษา)
+  Version    : 2.0.0
+  License    : MIT
+  ======================================================
+-->
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&family=Playfair+Display:ital,wght@1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --paper: #f5f0e8;
+    --gold: #c9a84c;
+    --gold-light: #e8d5a3;
+    --cream: #faf7f2;
+    --shadow: rgba(26,26,46,0.15);
+    --accent: #8b0000;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    font-family: 'Sarabun', sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(139,0,0,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .title-block {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  .title-block h1 {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--gold);
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+
+  .title-block p {
+    color: rgba(245,240,232,0.45);
+    font-size: 0.85rem;
+    margin-top: 8px;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+  }
+
+  .card {
+    background: var(--cream);
+    border-radius: 2px;
+    width: 100%;
+    max-width: 680px;
+    box-shadow: 
+      0 2px 0 var(--gold),
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.8);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+  }
+
+  .card-inner {
+    padding: 36px 40px;
+  }
+
+  /* --- Section Label --- */
+  .section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  /* --- Canvas Area --- */
+  .canvas-wrap {
+    position: relative;
+    border: 1.5px solid rgba(26,26,46,0.12);
+    border-radius: 1px;
+    background: white;
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  .canvas-wrap::after {
+    content: 'เซ็นชื่อของคุณที่นี่';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: rgba(26,26,46,0.1);
+    pointer-events: none;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    transition: opacity 0.3s;
+  }
+
+  .canvas-wrap.has-strokes::after { opacity: 0; }
+
+  canvas {
+    display: block;
+    width: 100%;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* --- Tools row --- */
+  .tools-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .tool-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(26,26,46,0.4);
+    white-space: nowrap;
+  }
+
+  /* Pen size buttons */
+  .size-btns {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .size-btn {
+    background: rgba(26,26,46,0.08);
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .size-btn:hover { background: rgba(201,168,76,0.25); }
+  .size-btn.active { background: var(--gold); }
+  .size-btn span {
+    background: var(--ink);
+    border-radius: 50%;
+    display: block;
+  }
+  .s1 span { width: 3px; height: 3px; }
+  .s2 span { width: 5px; height: 5px; }
+  .s3 span { width: 8px; height: 8px; }
+
+  /* Pen tip buttons */
+  .tip-btns {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .tip-btn {
+    background: rgba(26,26,46,0.08);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    color: rgba(26,26,46,0.55);
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tip-btn:hover { border-color: rgba(201,168,76,0.4); }
+  .tip-btn.active { background: var(--gold); color: var(--ink); border-color: var(--gold); font-weight: 600; }
+
+  /* Smoothing (pressure curve) */
+  .smooth-btns {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .smooth-btn {
+    background: rgba(26,26,46,0.08);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    color: rgba(26,26,46,0.55);
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .smooth-btn:hover { border-color: rgba(201,168,76,0.4); }
+  .smooth-btn.active { background: var(--gold); color: var(--ink); border-color: var(--gold); font-weight: 600; }
+
+  /* spacer */
+  .spacer { flex: 1; }
+
+  /* History buttons */
+  .history-btns {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .hist-btn {
+    background: none;
+    border: 1px solid rgba(26,26,46,0.15);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    color: rgba(26,26,46,0.45);
+    padding: 5px 10px;
+    border-radius: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .hist-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+  .hist-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+  .clear-btn {
+    background: none;
+    border: 1px solid rgba(26,26,46,0.15);
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(26,26,46,0.45);
+    padding: 6px 14px;
+    border-radius: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* --- Divider --- */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(26,26,46,0.1), transparent);
+    margin: 28px 0;
+  }
+
+  /* --- Image Size Selector --- */
+  .img-size-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .img-size-btn {
+    flex: 1;
+    min-width: 80px;
+    background: rgba(26,26,46,0.06);
+    border: 1.5px solid rgba(26,26,46,0.12);
+    border-radius: 4px;
+    padding: 10px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: 'Sarabun', sans-serif;
+  }
+  .img-size-btn:hover { border-color: var(--gold); }
+  .img-size-btn.active { border-color: var(--gold); background: rgba(201,168,76,0.1); }
+  .img-size-btn .isz-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ink);
+    display: block;
+    letter-spacing: 0.05em;
+  }
+  .img-size-btn .isz-dim {
+    font-size: 0.62rem;
+    color: rgba(26,26,46,0.4);
+    display: block;
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+  }
+  .img-size-btn .isz-preview {
+    margin: 6px auto 0;
+    background: rgba(201,168,76,0.25);
+    border: 1px solid rgba(201,168,76,0.4);
+  }
+  /* preview boxes scaled visually */
+  .isz-stand  { width: 18px; height: 32px; }
+  .isz-square { width: 26px; height: 26px; }
+  .isz-large  { width: 38px; height: 26px; }
+
+  /* --- Action Buttons --- */
+  .actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 1px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--gold);
+    box-shadow: 0 4px 14px rgba(26,26,46,0.2);
+  }
+  .btn-primary:hover {
+    background: #2a2a4e;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(26,26,46,0.3);
+  }
+
+  .btn-secondary {
+    background: var(--gold);
+    color: var(--ink);
+    box-shadow: 0 4px 14px rgba(201,168,76,0.25);
+  }
+  .btn-secondary:hover {
+    background: #d4b05c;
+    transform: translateY(-1px);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--ink);
+    border: 1.5px solid rgba(26,26,46,0.2);
+  }
+  .btn-outline:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* --- Gallery --- */
+  .gallery-section {
+    width: 100%;
+    max-width: 680px;
+    margin-top: 28px;
+  }
+
+  .gallery-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .gallery-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    color: rgba(245,240,232,0.6);
+    font-weight: 400;
+  }
+
+  .gallery-header .count-badge {
+    background: rgba(201,168,76,0.2);
+    color: var(--gold);
+    font-size: 0.7rem;
+    padding: 2px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.1em;
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .gallery-item {
+    background: var(--cream);
+    border-radius: 2px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    position: relative;
+    transition: transform 0.2s;
+  }
+  .gallery-item:hover { transform: translateY(-3px); }
+
+  .gallery-item img {
+    width: 100%;
+    height: 100px;
+    object-fit: contain;
+    padding: 12px;
+    background: white;
+    display: block;
+  }
+
+  .gallery-item .gi-info {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(26,26,46,0.08);
+  }
+
+  .gallery-item .gi-name {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .gallery-item .gi-date {
+    font-size: 0.65rem;
+    color: rgba(26,26,46,0.35);
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .gallery-item .gi-actions {
+    position: absolute;
+    top: 6px; right: 6px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .gallery-item:hover .gi-actions { opacity: 1; }
+
+  .gi-btn {
+    background: rgba(26,26,46,0.75);
+    border: none;
+    color: white;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.7rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+    backdrop-filter: blur(4px);
+  }
+  .gi-btn:hover { background: var(--gold); color: var(--ink); }
+
+  .empty-gallery {
+    text-align: center;
+    padding: 32px;
+    color: rgba(245,240,232,0.2);
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: var(--gold);
+    padding: 12px 24px;
+    border-radius: 2px;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    border: 1px solid rgba(201,168,76,0.3);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 999;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Download Name Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .modal-box {
+    background: var(--cream);
+    border-radius: 4px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border-top: 3px solid var(--gold);
+  }
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.2rem;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .modal-sub {
+    font-size: 0.75rem;
+    color: rgba(26,26,46,0.4);
+    margin-bottom: 18px;
+    letter-spacing: 0.05em;
+  }
+  .modal-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1.5px solid rgba(26,26,46,0.2);
+    background: transparent;
+    padding: 10px 4px 8px;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.3s;
+    margin-bottom: 20px;
+  }
+  .modal-input:focus { border-color: var(--gold); }
+  .modal-input::placeholder { color: rgba(26,26,46,0.25); }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .modal-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 2px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .modal-btn-ok { background: var(--ink); color: var(--gold); }
+  .modal-btn-ok:hover { background: #2a2a4e; }
+  .modal-btn-cancel { background: transparent; color: var(--ink); border: 1px solid rgba(26,26,46,0.2); }
+  .modal-btn-cancel:hover { border-color: var(--gold); }
+
+  /* Mobile landscape */
+  @media (max-width: 600px) {
+    body { padding: 20px 12px; }
+    .card-inner { padding: 20px 16px; }
+    .actions { flex-direction: column; }
+    .btn { min-width: unset; }
+    .title-block { margin-bottom: 20px; }
+    .tools-row { gap: 8px; }
+  }
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    body { padding: 10px 12px; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 12px; }
+    .title-block { width: 100%; margin-bottom: 10px; }
+    .title-block h1 { font-size: 1.4rem; }
+    .title-block p { font-size: 0.7rem; margin-top: 2px; }
+    .card { max-width: 100%; }
+    .card-inner { padding: 14px 16px; }
+    .canvas-wrap canvas { height: 150px !important; }
+    .divider { margin: 14px 0; }
+    .gallery-section { max-width: 100%; margin-top: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <h1>Digital Signature</h1>
+  <p>ลายเซ็นดิจิทัล · บันทึกและดาวน์โหลด PNG</p>
+</div>
+
+<div class="card">
+  <div class="card-inner">
+
+    <!-- Draw Panel -->
+    <div id="panel-draw">
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="sigCanvas"></canvas>
+      </div>
+
+      <!-- Tools Row 1: Pen size + Tip -->
+      <div class="tools-row">
+        <span class="tool-label">ขนาด</span>
+        <div class="size-btns">
+          <button class="size-btn s1" onclick="setSize(1.5, this)"><span></span></button>
+          <button class="size-btn s2 active" onclick="setSize(2.5, this)"><span></span></button>
+          <button class="size-btn s3" onclick="setSize(4, this)"><span></span></button>
+        </div>
+
+        <span class="tool-label" style="margin-left:6px">หัวปากกา</span>
+        <div class="tip-btns">
+          <button class="tip-btn active" onclick="setTip('round', this)" title="ปลายกลม">⬤ กลม</button>
+          <button class="tip-btn" onclick="setTip('calligraphy', this)" title="ปลายแบน">▬ แบน</button>
+        </div>
+      </div>
+
+      <!-- Tools Row 2: History + Clear -->
+      <div class="tools-row" style="margin-top:8px">
+        <div class="spacer"></div>
+        <div class="history-btns">
+          <button class="hist-btn" id="btnUndo" onclick="undo()" disabled title="ย้อนกลับ">◀ ย้อน</button>
+          <button class="hist-btn" id="btnRedo" onclick="redo()" disabled title="ทำซ้ำ">ทำซ้ำ ▶</button>
+        </div>
+        <button class="clear-btn" onclick="clearCanvas()">ล้าง</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Image Size Selector (hidden, shown via popup) -->
+    <div class="img-size-row" id="imgSizeRow" style="display:none">
+      <button class="img-size-btn active" id="sizeBtn-stand" onclick="setImgSize('stand', this)">
+        <span class="isz-name">Stand</span>
+        <span class="isz-dim">700 × 400 px</span>
+        <div class="isz-preview isz-stand"></div>
+      </button>
+      <button class="img-size-btn" id="sizeBtn-square" onclick="setImgSize('square', this)">
+        <span class="isz-name">Square</span>
+        <span class="isz-dim">600 × 600 px</span>
+        <div class="isz-preview isz-square"></div>
+      </button>
+      <button class="img-size-btn" id="sizeBtn-large" onclick="setImgSize('large', this)">
+        <span class="isz-name">Large</span>
+        <span class="isz-dim">900 × 600 px</span>
+        <div class="isz-preview isz-large"></div>
+      </button>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="saveDraft()">
+        📋 เก็บแบบร่าง
+      </button>
+      <button class="btn btn-secondary" onclick="triggerDownload()">
+        ⬇️ Save as PNG
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Gallery -->
+<div class="gallery-section">
+  <div class="gallery-header">
+    <h2>แบบร่างของฉัน</h2>
+    <span class="count-badge" id="countBadge">0 รายการ</span>
+  </div>
+  <div class="gallery-grid" id="gallery">
+    <div class="empty-gallery" id="emptyMsg">ยังไม่มีลายเซ็นที่บันทึก</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Download Name Modal -->
+<div class="modal-overlay" id="downloadModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">ตั้งชื่อไฟล์</div>
+    <div class="modal-sub">ใส่ชื่อก่อนดำเนินการ</div>
+    <input class="modal-input" id="downloadName" type="text" placeholder="ชื่อไฟล์ลายเซ็น" autocomplete="off" maxlength="60">
+    <!-- Size selector inside modal -->
+    <div style="margin-bottom:18px;">
+      <div class="section-label" style="margin-bottom:8px;">ขนาดภาพ</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="img-size-btn active" id="modalSizeBtn-stand" onclick="setImgSizeModal('stand')" style="flex:1;min-width:70px;">
+          <span class="isz-name">Stand</span>
+          <span class="isz-dim">700 × 400</span>
+        </button>
+        <button class="img-size-btn" id="modalSizeBtn-square" onclick="setImgSizeModal('square')" style="flex:1;min-width:70px;">
+          <span class="isz-name">Square</span>
+          <span class="isz-dim">600 × 600</span>
+        </button>
+        <button class="img-size-btn" id="modalSizeBtn-large" onclick="setImgSizeModal('large')" style="flex:1;min-width:70px;">
+          <span class="isz-name">Large</span>
+          <span class="isz-dim">900 × 600</span>
+        </button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">ยกเลิก</button>
+      <button class="modal-btn modal-btn-ok" id="modalOkBtn" onclick="confirmDownload()">ดาวน์โหลด ⬇️</button>
+    </div>
+  </div>
+</div>
+
+<footer style="margin-top:40px;text-align:center;font-size:0.7rem;letter-spacing:0.12em;color:rgba(245,240,232,0.22);font-family:'Sarabun',sans-serif;">
+  Created by <span style="color:rgba(201,168,76,0.5)">Kriangkrai Ketraksa</span> &nbsp;·&nbsp; เกรียงไกร เกตุรักษา
+</footer>
+
+<script>
+// ---- Canvas Setup ----
+const canvas = document.getElementById('sigCanvas');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvasWrap');
+
+let drawing = false;
+let lastX = 0, lastY = 0;
+let penColor = '#1a1a2e';
+let penSize = 2.5;
+let penTip = 'round';      // 'round' | 'flat' | 'calligraphy'
+let smoothFactor = 0.3;    // 0 = sharp, 0.6 = very smooth
+let hasStrokes = false;
+
+// Smoothed point tracking
+let smoothX = 0, smoothY = 0;
+
+// History (undo/redo)
+let history = [];
+let historyIndex = -1;
+const MAX_HISTORY = 40;
+
+// Image export size
+const IMG_SIZES = {
+  stand:  { w: 700, h: 400 },
+  square: { w: 600, h: 600 },
+  large:  { w: 900, h: 600 },
+};
+let selectedSize = 'stand';
+
+function resizeCanvas() {
+  const w = wrap.clientWidth;
+  const ratio = window.devicePixelRatio || 1;
+
+  // Save current drawing as image (scaled correctly) before resize
+  let imgSnapshot = null;
+  if (canvas.width > 0 && canvas.height > 0 && hasStrokes) {
+    imgSnapshot = document.createElement('canvas');
+    imgSnapshot.width = canvas.width;
+    imgSnapshot.height = canvas.height;
+    imgSnapshot.getContext('2d').drawImage(canvas, 0, 0);
+  }
+
+  // Determine canvas height based on orientation
+  const isLandscapeMobile = window.innerWidth <= 900 && window.innerHeight < 500;
+  const h = isLandscapeMobile ? 130 : 220;
+
+  const prevLogicalW = canvas.width / ratio;
+  const prevLogicalH = canvas.height / ratio;
+
+  canvas.width = w * ratio;
+  canvas.height = h * ratio;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  ctx.scale(ratio, ratio);
+  ctx.lineCap = penTip === 'flat' ? 'butt' : 'round';
+  ctx.lineJoin = 'round';
+
+  // Restore drawing scaled to new size
+  if (imgSnapshot && hasStrokes) {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(imgSnapshot, 0, 0, imgSnapshot.width, imgSnapshot.height, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    ctx.scale(ratio, ratio);
+  }
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
+
+// ---- Drawing Helpers ----
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / r.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / r.height;
+  return {
+    x: (src.clientX - r.left) * scaleX,
+    y: (src.clientY - r.top) * scaleY,
+  };
+}
+
+function applyPenStyle() {
+  ctx.strokeStyle = penColor;
+  ctx.fillStyle = penColor;
+  if (penTip === 'calligraphy') {
+    ctx.lineWidth = penSize * 2;
+    ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
+  } else if (penTip === 'flat') {
+    ctx.lineWidth = penSize;
+    ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
+  } else {
+    ctx.lineWidth = penSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }
+}
+
+function startDraw(e) {
+  e.preventDefault();
+  saveSnapshot(); // snapshot before stroke
+  drawing = true;
+  const p = getPos(e);
+  lastX = p.x; lastY = p.y;
+  smoothX = p.x; smoothY = p.y;
+  applyPenStyle();
+  ctx.beginPath();
+  if (penTip === 'calligraphy') {
+    // Draw thin initial dot
+    ctx.fillRect(p.x - penSize / 4, p.y - penSize, penSize / 2, penSize * 2);
+  } else {
+    ctx.arc(p.x, p.y, penSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function draw(e) {
+  if (!drawing) return;
+  e.preventDefault();
+  const p = getPos(e);
+
+  // Smooth interpolation
+  smoothX = smoothX + (p.x - smoothX) * (1 - smoothFactor);
+  smoothY = smoothY + (p.y - smoothY) * (1 - smoothFactor);
+
+  applyPenStyle();
+  ctx.beginPath();
+
+  if (penTip === 'calligraphy') {
+    // Calligraphy: vary width by angle
+    const dx = smoothX - lastX;
+    const dy = smoothY - lastY;
+    const angle = Math.atan2(dy, dx);
+    const w = penSize * (1.5 + 1.5 * Math.abs(Math.sin(angle - Math.PI / 4)));
+    ctx.lineWidth = w;
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(smoothX, smoothY);
+    ctx.stroke();
+  } else {
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(smoothX, smoothY);
+    ctx.stroke();
+  }
+
+  lastX = smoothX; lastY = smoothY;
+  if (!hasStrokes) { hasStrokes = true; wrap.classList.add('has-strokes'); }
+}
+
+function endDraw() {
+  if (drawing) {
+    drawing = false;
+    pushHistory();
+  }
+}
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('mouseleave', endDraw);
+canvas.addEventListener('touchstart', startDraw, { passive: false });
+canvas.addEventListener('touchmove', draw, { passive: false });
+canvas.addEventListener('touchend', endDraw);
+
+// Prevent page scroll while drawing on mobile
+document.body.addEventListener('touchmove', e => {
+  if (drawing) e.preventDefault();
+}, { passive: false });
+
+// ---- Pen Controls ----
+function setSize(s, el) {
+  penSize = s;
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setTip(tip, el) {
+  penTip = tip;
+  document.querySelectorAll('.tip-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setSmooth(val, el) {
+  smoothFactor = val;
+  document.querySelectorAll('.smooth-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ---- Image Size ----
+function setImgSize(key, el) {
+  selectedSize = key;
+  document.querySelectorAll('.img-size-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ---- Undo / Redo ----
+let _snapshot = null;
+
+function saveSnapshot() {
+  _snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+function pushHistory() {
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  // Remove future states
+  history = history.slice(0, historyIndex + 1);
+  history.push(data);
+  if (history.length > MAX_HISTORY) history.shift();
+  historyIndex = history.length - 1;
+  updateHistoryBtns();
+}
+
+function undo() {
+  if (historyIndex <= 0) {
+    // Undo all → clear
+    clearCanvas(true);
+    return;
+  }
+  historyIndex--;
+  ctx.putImageData(history[historyIndex], 0, 0);
+  hasStrokes = true; wrap.classList.add('has-strokes');
+  updateHistoryBtns();
+}
+
+function redo() {
+  if (historyIndex >= history.length - 1) return;
+  historyIndex++;
+  ctx.putImageData(history[historyIndex], 0, 0);
+  updateHistoryBtns();
+}
+
+function updateHistoryBtns() {
+  document.getElementById('btnUndo').disabled = (historyIndex < 0 && !hasStrokes) || (history.length === 0);
+  document.getElementById('btnRedo').disabled = historyIndex >= history.length - 1;
+}
+
+function clearCanvas(skipHistory) {
+  const ratio = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width / ratio * ratio, canvas.height / ratio * ratio);
+  hasStrokes = false;
+  wrap.classList.remove('has-strokes');
+  if (!skipHistory) {
+    history = [];
+    historyIndex = -1;
+    updateHistoryBtns();
+  }
+}
+
+// ---- Get current signature as transparent PNG DataURL ----
+function getSignatureDataURL(outW, outH) {
+  if (!hasStrokes) { showToast('กรุณาเซ็นชื่อก่อน'); return null; }
+
+  const ratio = window.devicePixelRatio || 1;
+  const srcW = canvas.width;
+  const srcH = canvas.height;
+
+  const out = document.createElement('canvas');
+  out.width = outW;
+  out.height = outH;
+  const oc = out.getContext('2d');
+  oc.clearRect(0, 0, outW, outH);
+
+  // Scale signature to fit output, centered
+  const scaleW = outW / (srcW / ratio);
+  const scaleH = outH / (srcH / ratio);
+  const scale = Math.min(scaleW, scaleH, 1); // don't upscale too much
+  const dw = (srcW / ratio) * scale;
+  const dh = (srcH / ratio) * scale;
+  const dx = (outW - dw) / 2;
+  const dy = (outH - dh) / 2;
+
+  oc.drawImage(canvas, 0, 0, srcW, srcH, dx, dy, dw, dh);
+  return out.toDataURL('image/png');
+}
+
+// ---- Download flow ----
+let _modalMode = 'download'; // 'download' | 'draft'
+
+function setImgSizeModal(key) {
+  selectedSize = key;
+  ['stand','square','large'].forEach(k => {
+    const btn = document.getElementById('modalSizeBtn-' + k);
+    if (btn) btn.classList.toggle('active', k === key);
+  });
+}
+
+function triggerDownload() {
+  if (!hasStrokes) { showToast('กรุณาเซ็นชื่อก่อน'); return; }
+  _modalMode = 'download';
+  document.getElementById('downloadName').value = '';
+  document.getElementById('modalTitle').textContent = 'ตั้งชื่อไฟล์';
+  document.getElementById('modalOkBtn').textContent = 'ดาวน์โหลด ⬇️';
+  setImgSizeModal(selectedSize);
+  document.getElementById('downloadModal').classList.add('show');
+  setTimeout(() => document.getElementById('downloadName').focus(), 100);
+}
+
+function saveDraft() {
+  const sz = IMG_SIZES[selectedSize];
+  const dataURL = getSignatureDataURL(sz.w, sz.h);
+  if (!dataURL) return;
+  const items = loadGallery();
+  const id = Date.now().toString();
+  items.unshift({ id, dataURL, date: new Date().toLocaleDateString('th-TH'), size: selectedSize });
+  saveGallery(items);
+  renderGallery();
+  showToast('เก็บแบบร่างแล้ว ✓');
+}
+
+function closeModal() {
+  document.getElementById('downloadModal').classList.remove('show');
+}
+
+function confirmDownload() {
+  const name = (document.getElementById('downloadName').value.trim() || 'signature');
+  closeModal();
+
+  if (_modalMode === 'gallery' && _galleryDownloadItem) {
+    const a = document.createElement('a');
+    a.href = _galleryDownloadItem.dataURL;
+    a.download = name.replace(/\s+/g, '_') + '_' + (_galleryDownloadItem.size || 'sig') + '.png';
+    a.click();
+    _galleryDownloadItem = null;
+    showToast('ดาวน์โหลดแล้ว ✓');
+  } else {
+    const sz = IMG_SIZES[selectedSize];
+    const dataURL = getSignatureDataURL(sz.w, sz.h);
+    if (!dataURL) return;
+    const a = document.createElement('a');
+    a.href = dataURL;
+    a.download = name.replace(/\s+/g, '_') + '_' + selectedSize + '.png';
+    a.click();
+    showToast('ดาวน์โหลดแล้ว ✓');
+  }
+}
+
+// Allow Enter key in modal
+document.getElementById('downloadName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmDownload();
+  if (e.key === 'Escape') closeModal();
+});
+
+// Close modal on overlay click
+document.getElementById('downloadModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// ---- Local "Draft" Storage ----
+const STORAGE_KEY = 'signature_draft_v2';
+
+function loadGallery() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveGallery(items) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function deleteItem(id) {
+  let items = loadGallery().filter(i => i.id !== id);
+  saveGallery(items);
+  renderGallery();
+  showToast('ลบแล้ว');
+}
+
+let _galleryDownloadItem = null;
+
+function downloadItem(id) {
+  const item = loadGallery().find(i => i.id === id);
+  if (!item) return;
+  _galleryDownloadItem = item;
+  _modalMode = 'gallery';
+  document.getElementById('downloadName').value = '';
+  document.getElementById('modalTitle').textContent = 'ตั้งชื่อไฟล์';
+  document.getElementById('modalOkBtn').textContent = 'ดาวน์โหลด ⬇️';
+  // Reflect the size saved with this draft
+  setImgSizeModal(item.size || 'stand');
+  document.getElementById('downloadModal').classList.add('show');
+  setTimeout(() => document.getElementById('downloadName').focus(), 100);
+}
+
+function renderGallery() {
+  const items = loadGallery();
+  const grid = document.getElementById('gallery');
+  const badge = document.getElementById('countBadge');
+  const empty = document.getElementById('emptyMsg');
+  badge.textContent = items.length + ' รายการ';
+
+  grid.querySelectorAll('.gallery-item').forEach(c => c.remove());
+
+  if (items.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'gallery-item';
+    div.innerHTML = `
+      <img src="${item.dataURL}" alt="draft">
+      <div class="gi-info">
+        <div class="gi-name">${item.size || 'sig'} · ${item.date}</div>
+        <div class="gi-date">${item.date}</div>
+      </div>
+      <div class="gi-actions">
+        <button class="gi-btn" title="ดาวน์โหลด" onclick="downloadItem('${item.id}')">⬇</button>
+        <button class="gi-btn" title="ลบ" onclick="deleteItem('${item.id}')">✕</button>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// ---- Toast ----
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ---- Init ----
+renderGallery();
+pushHistory(); // initial empty state for undo baseline
+</script>
+</body>
+</html>
