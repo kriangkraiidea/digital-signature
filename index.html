@@ -761,10 +761,10 @@ const IMG_SIZES = {
 let selectedSize = 'stand';
 
 function resizeCanvas() {
-  const w = wrap.clientWidth;
+  const cssW = wrap.clientWidth;
   const ratio = window.devicePixelRatio || 1;
 
-  // Save current drawing as image (scaled correctly) before resize
+  // Snapshot current drawing at physical pixel level before clearing
   let imgSnapshot = null;
   if (canvas.width > 0 && canvas.height > 0 && hasStrokes) {
     imgSnapshot = document.createElement('canvas');
@@ -773,28 +773,23 @@ function resizeCanvas() {
     imgSnapshot.getContext('2d').drawImage(canvas, 0, 0);
   }
 
-  // Determine canvas height based on orientation
   const isLandscapeMobile = window.innerWidth <= 900 && window.innerHeight < 500;
-  const h = isLandscapeMobile ? 130 : 220;
+  const cssH = isLandscapeMobile ? 130 : 220;
 
-  const prevLogicalW = canvas.width / ratio;
-  const prevLogicalH = canvas.height / ratio;
+  // Physical pixels — NO ctx.scale, we work in physical px throughout
+  canvas.width  = Math.round(cssW * ratio);
+  canvas.height = Math.round(cssH * ratio);
+  canvas.style.width  = cssW + 'px';
+  canvas.style.height = cssH + 'px';
 
-  canvas.width = w * ratio;
-  canvas.height = h * ratio;
-  canvas.style.width = w + 'px';
-  canvas.style.height = h + 'px';
-  ctx.scale(ratio, ratio);
-  ctx.lineCap = penTip === 'flat' ? 'butt' : 'round';
+  // Reset transform to identity — never accumulate
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.lineCap  = 'round';
   ctx.lineJoin = 'round';
 
-  // Restore drawing scaled to new size
   if (imgSnapshot && hasStrokes) {
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(imgSnapshot, 0, 0, imgSnapshot.width, imgSnapshot.height, 0, 0, canvas.width, canvas.height);
-    ctx.restore();
-    ctx.scale(ratio, ratio);
+    ctx.drawImage(imgSnapshot, 0, 0, imgSnapshot.width, imgSnapshot.height,
+                               0, 0, canvas.width,      canvas.height);
   }
 }
 
@@ -803,49 +798,53 @@ window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
 
 // ---- Drawing Helpers ----
+// getPos always returns PHYSICAL pixels (matching canvas.width/height)
 function getPos(e) {
-  const r = canvas.getBoundingClientRect();
+  const r   = canvas.getBoundingClientRect();
   const src = e.touches ? e.touches[0] : e;
-  const scaleX = canvas.width / (window.devicePixelRatio || 1) / r.width;
-  const scaleY = canvas.height / (window.devicePixelRatio || 1) / r.height;
+  const scaleX = canvas.width  / r.width;
+  const scaleY = canvas.height / r.height;
   return {
     x: (src.clientX - r.left) * scaleX,
-    y: (src.clientY - r.top) * scaleY,
+    y: (src.clientY - r.top)  * scaleY,
   };
 }
 
 function applyPenStyle() {
+  const ratio = window.devicePixelRatio || 1;
+  const pw = penSize * ratio; // physical-pixel line width
   ctx.strokeStyle = penColor;
-  ctx.fillStyle = penColor;
+  ctx.fillStyle   = penColor;
   if (penTip === 'calligraphy') {
-    ctx.lineWidth = penSize * 2;
-    ctx.lineCap = 'butt';
-    ctx.lineJoin = 'miter';
+    ctx.lineWidth = pw * 2;
+    ctx.lineCap   = 'butt';
+    ctx.lineJoin  = 'miter';
   } else if (penTip === 'flat') {
-    ctx.lineWidth = penSize;
-    ctx.lineCap = 'butt';
-    ctx.lineJoin = 'miter';
+    ctx.lineWidth = pw;
+    ctx.lineCap   = 'butt';
+    ctx.lineJoin  = 'miter';
   } else {
-    ctx.lineWidth = penSize;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.lineWidth = pw;
+    ctx.lineCap   = 'round';
+    ctx.lineJoin  = 'round';
   }
 }
 
 function startDraw(e) {
   e.preventDefault();
-  saveSnapshot(); // snapshot before stroke
+  saveSnapshot();
   drawing = true;
   const p = getPos(e);
   lastX = p.x; lastY = p.y;
   smoothX = p.x; smoothY = p.y;
   applyPenStyle();
   ctx.beginPath();
+  const ratio = window.devicePixelRatio || 1;
   if (penTip === 'calligraphy') {
-    // Draw thin initial dot
-    ctx.fillRect(p.x - penSize / 4, p.y - penSize, penSize / 2, penSize * 2);
+    ctx.fillRect(p.x - penSize * ratio / 4, p.y - penSize * ratio,
+                 penSize * ratio / 2,        penSize * ratio * 2);
   } else {
-    ctx.arc(p.x, p.y, penSize / 2, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, penSize * ratio / 2, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -855,9 +854,9 @@ function draw(e) {
   e.preventDefault();
   const p = getPos(e);
 
-  // Smooth interpolation
-  smoothX = smoothX + (p.x - smoothX) * (1 - smoothFactor);
-  smoothY = smoothY + (p.y - smoothY) * (1 - smoothFactor);
+  // No smoothing lag — draw directly to pointer position
+  smoothX = p.x;
+  smoothY = p.y;
 
   applyPenStyle();
   ctx.beginPath();
@@ -970,8 +969,7 @@ function updateHistoryBtns() {
 }
 
 function clearCanvas(skipHistory) {
-  const ratio = window.devicePixelRatio || 1;
-  ctx.clearRect(0, 0, canvas.width / ratio * ratio, canvas.height / ratio * ratio);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   hasStrokes = false;
   wrap.classList.remove('has-strokes');
   if (!skipHistory) {
@@ -986,25 +984,45 @@ function getSignatureDataURL(outW, outH) {
   if (!hasStrokes) { showToast('กรุณาเซ็นชื่อก่อน'); return null; }
 
   const ratio = window.devicePixelRatio || 1;
-  const srcW = canvas.width;
+  const srcW = canvas.width;   // physical pixels
   const srcH = canvas.height;
+
+  // --- Find bounding box of inked pixels ---
+  const imgData = ctx.getImageData(0, 0, srcW, srcH);
+  const d = imgData.data;
+  let minX = srcW, minY = srcH, maxX = 0, maxY = 0;
+  for (let y = 0; y < srcH; y++) {
+    for (let x = 0; x < srcW; x++) {
+      const a = d[(y * srcW + x) * 4 + 3];
+      if (a > 10) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < minX || maxY < minY) return null; // no ink
+
+  const inkW = maxX - minX + 1;
+  const inkH = maxY - minY + 1;
+
+  // --- Scale ink to fill output with equal padding (5% each side) ---
+  const pad = Math.min(outW, outH) * 0.05;
+  const availW = outW - pad * 2;
+  const availH = outH - pad * 2;
+  const scale = Math.min(availW / inkW, availH / inkH);
+  const dw = inkW * scale;
+  const dh = inkH * scale;
+  const dx = (outW - dw) / 2;
+  const dy = (outH - dh) / 2;
 
   const out = document.createElement('canvas');
   out.width = outW;
   out.height = outH;
   const oc = out.getContext('2d');
   oc.clearRect(0, 0, outW, outH);
-
-  // Scale signature to fit output, centered
-  const scaleW = outW / (srcW / ratio);
-  const scaleH = outH / (srcH / ratio);
-  const scale = Math.min(scaleW, scaleH, 1); // don't upscale too much
-  const dw = (srcW / ratio) * scale;
-  const dh = (srcH / ratio) * scale;
-  const dx = (outW - dw) / 2;
-  const dy = (outH - dh) / 2;
-
-  oc.drawImage(canvas, 0, 0, srcW, srcH, dx, dy, dw, dh);
+  oc.drawImage(canvas, minX, minY, inkW, inkH, dx, dy, dw, dh);
   return out.toDataURL('image/png');
 }
 
