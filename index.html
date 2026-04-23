@@ -607,14 +607,21 @@
 </head>
 <body>
 
-<!-- In-app browser warning banner -->
-<div id="inappBanner" style="display:none;width:100%;max-width:680px;margin-bottom:16px;background:rgba(201,168,76,0.12);border:1.5px solid rgba(201,168,76,0.4);border-radius:4px;padding:14px 18px;font-family:'Sarabun',sans-serif;font-size:0.82rem;color:rgba(245,240,232,0.85);line-height:1.6;box-sizing:border-box;">
-  <div style="display:flex;align-items:flex-start;gap:10px;">
-    <span style="font-size:1.2rem;margin-top:1px;">&#9888;&#65039;</span>
-    <div style="flex:1;">
-      <div style="font-weight:600;color:var(--gold);margin-bottom:4px;" id="inappTitle">เปิดในเบราว์เซอร์หลักเพื่อใช้งาน</div>
-      <div id="inappMsg">แอปนี้ต้องการเบราว์เซอร์หลักเพื่อดาวน์โหลดไฟล์ได้อย่างถูกต้อง</div>
-      <div id="inappBtnWrap" style="margin-top:10px;"></div>
+<!-- In-app Browser Floating Popup (chat-head style) -->
+<div id="inappFloat" style="display:none;position:fixed;bottom:24px;right:20px;z-index:9999;font-family:'Sarabun',sans-serif;">
+  <!-- Collapsed bubble -->
+  <div id="inappBubble" onclick="inappExpand()" style="width:52px;height:52px;border-radius:50%;background:var(--gold);box-shadow:0 4px 18px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.4rem;transition:transform 0.2s;" title="เปิดในเบราว์เซอร์หลัก">🌐</div>
+  <!-- Expanded card -->
+  <div id="inappCard" style="display:none;position:absolute;bottom:60px;right:0;width:290px;background:#1e1e38;border:1.5px solid rgba(201,168,76,0.45);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.55);overflow:hidden;">
+    <!-- Header bar -->
+    <div style="background:rgba(201,168,76,0.18);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(201,168,76,0.2);">
+      <span style="font-weight:600;font-size:0.82rem;color:var(--gold);letter-spacing:0.05em;" id="inappTitle">เปิดในเบราว์เซอร์หลัก</span>
+      <button onclick="inappCollapse()" style="background:none;border:none;color:rgba(245,240,232,0.5);font-size:1rem;cursor:pointer;line-height:1;padding:0 2px;" title="พับ">−</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:12px 14px 14px;">
+      <div id="inappMsg" style="font-size:0.78rem;color:rgba(245,240,232,0.7);line-height:1.55;margin-bottom:10px;"></div>
+      <div id="inappBtnWrap"></div>
     </div>
   </div>
 </div>
@@ -622,7 +629,7 @@
 <div class="title-block">
   <h1>Digital Signature</h1>
   <p>ลายเซ็นดิจิทัล · บันทึกและดาวน์โหลด PNG</p>
-  <p style="margin-top:6px;font-size:0.7rem;letter-spacing:0.12em;color:rgba(245,240,232,0.22);">Created by <span style="color:rgba(201,168,76,0.5)">Kriangkrai Ketraksa</span> &nbsp;·&nbsp; เกรียงไกร เกตุรักษา</p>
+  <p style="margin-top:6px;font-size:0.7rem;letter-spacing:0.12em;color:rgba(245,240,232,0.22);">Created by <a href="https://github.com/kriangkraiidea" target="_blank" rel="noopener" style="color:rgba(201,168,76,0.5);text-decoration:none;">Kriangkrai Ketraksa</a> &nbsp;·&nbsp; เกรียงไกร เกตุรักษา</p>
 </div>
 
 <div class="card">
@@ -1189,79 +1196,63 @@ renderGallery();
 pushHistory(); // initial empty state for undo baseline
 
 // ---- In-App Browser Detection ----
+function inappExpand() {
+  document.getElementById('inappBubble').style.display = 'none';
+  document.getElementById('inappCard').style.display = 'block';
+}
+function inappCollapse() {
+  document.getElementById('inappCard').style.display = 'none';
+  document.getElementById('inappBubble').style.display = 'flex';
+}
+
 (function() {
-  const ua = navigator.userAgent || '';
+  const ua  = navigator.userAgent || '';
   const url = location.href;
 
-  const isLine = /\bLine\b/i.test(ua);
+  const isLine      = /\bLine\b/i.test(ua);
   const isFBAndroid = /FBAN|FBAV|FB_IAB|FBIOS/i.test(ua);
-  const isFBIOS = /FBIOS/i.test(ua);
-  const isInApp = isLine || isFBAndroid;
+  const isIOS       = /iP(hone|od|ad)/i.test(ua);
+  const isInApp     = isLine || isFBAndroid;
 
   if (!isInApp) return;
 
-  const banner   = document.getElementById('inappBanner');
-  const titleEl  = document.getElementById('inappTitle');
-  const msgEl    = document.getElementById('inappMsg');
-  const btnWrap  = document.getElementById('inappBtnWrap');
+  const floatEl = document.getElementById('inappFloat');
+  const titleEl = document.getElementById('inappTitle');
+  const msgEl   = document.getElementById('inappMsg');
+  const btnWrap = document.getElementById('inappBtnWrap');
 
-  banner.style.display = 'block';
+  floatEl.style.display = 'block';
+
+  const btnStyle = 'display:inline-block;background:var(--gold);color:var(--ink);padding:8px 16px;border-radius:6px;font-weight:600;font-size:0.78rem;letter-spacing:0.06em;text-decoration:none;margin-top:2px;';
+  const noteStyle = 'margin-top:8px;font-size:0.73rem;color:rgba(245,240,232,0.45);line-height:1.5;';
 
   if (isLine) {
-    titleEl.textContent = 'กำลังเปิดใน LINE Browser';
-    msgEl.textContent   = 'กรุณาเปิดในเบราว์เซอร์หลัก (Chrome / Safari) เพื่อให้ดาวน์โหลดไฟล์ได้ถูกต้อง';
+    titleEl.textContent = 'เปิดใน LINE Browser';
+    msgEl.textContent   = 'ดาวน์โหลดไฟล์อาจไม่ทำงานใน LINE กรุณาเปิดในเบราว์เซอร์หลัก';
 
-    // LINE on iOS supports line:// scheme to open in Safari
-    const isIOS = /iP(hone|od|ad)/i.test(ua);
     if (isIOS) {
-      // LINE iOS: use openExternalBrowser=1 parameter
       const extUrl = url + (url.includes('?') ? '&' : '?') + 'openExternalBrowser=1';
-      const btn = document.createElement('a');
-      btn.href = extUrl;
-      btn.textContent = '🌐 เปิดใน Safari';
-      btn.style.cssText = 'display:inline-block;background:var(--gold);color:var(--ink);padding:8px 18px;border-radius:4px;font-weight:600;font-size:0.8rem;letter-spacing:0.08em;text-decoration:none;';
-      btnWrap.appendChild(btn);
+      btnWrap.innerHTML = `<a href="${extUrl}" style="${btnStyle}">🌐 เปิดใน Safari</a>`;
     } else {
-      // LINE Android: intent scheme
       const intentUrl = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
-      const btn = document.createElement('a');
-      btn.href = intentUrl;
-      btn.textContent = '🌐 เปิดใน Chrome';
-      btn.style.cssText = 'display:inline-block;background:var(--gold);color:var(--ink);padding:8px 18px;border-radius:4px;font-weight:600;font-size:0.8rem;letter-spacing:0.08em;text-decoration:none;';
-      btnWrap.appendChild(btn);
-
-      // Fallback instruction if intent doesn't work
-      const note = document.createElement('div');
-      note.style.cssText = 'margin-top:8px;font-size:0.75rem;color:rgba(245,240,232,0.5);';
-      note.textContent = 'หากปุ่มไม่ทำงาน: กดปุ่ม ··· มุมขวาบน → เลือก "เปิดในเบราว์เซอร์"';
-      btnWrap.appendChild(note);
+      btnWrap.innerHTML = `<a href="${intentUrl}" style="${btnStyle}">🌐 เปิดใน Chrome</a>
+        <div style="${noteStyle}">หากปุ่มไม่ทำงาน: กด <b style="color:var(--gold)">···</b> มุมขวาบน → <b style="color:var(--gold)">"เปิดในเบราว์เซอร์"</b></div>`;
     }
   } else if (isFBAndroid) {
-    titleEl.textContent = 'กำลังเปิดใน Facebook Browser';
-    msgEl.textContent   = 'กรุณาเปิดในเบราว์เซอร์หลัก (Chrome / Safari) เพื่อให้ดาวน์โหลดไฟล์ได้ถูกต้อง';
+    titleEl.textContent = 'เปิดใน Facebook Browser';
+    msgEl.textContent   = 'ดาวน์โหลดไฟล์อาจไม่ทำงานใน Facebook กรุณาเปิดในเบราว์เซอร์หลัก';
 
-    const isIOS = /iP(hone|od|ad)/i.test(ua);
     if (isIOS) {
-      // Facebook iOS: cannot auto-redirect, show instructions
-      const note = document.createElement('div');
-      note.style.cssText = 'font-size:0.78rem;color:rgba(245,240,232,0.65);margin-top:4px;';
-      note.innerHTML = 'กด <strong style="color:var(--gold)">···</strong> มุมขวาบน → เลือก <strong style="color:var(--gold)">"เปิดใน Safari"</strong>';
-      btnWrap.appendChild(note);
+      btnWrap.innerHTML = `<div style="${noteStyle};color:rgba(245,240,232,0.65);">กด <b style="color:var(--gold)">···</b> มุมขวาบน → <b style="color:var(--gold)">"เปิดใน Safari"</b></div>`;
     } else {
-      // Facebook Android: intent scheme to Chrome
       const intentUrl = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
-      const btn = document.createElement('a');
-      btn.href = intentUrl;
-      btn.textContent = '🌐 เปิดใน Chrome';
-      btn.style.cssText = 'display:inline-block;background:var(--gold);color:var(--ink);padding:8px 18px;border-radius:4px;font-weight:600;font-size:0.8rem;letter-spacing:0.08em;text-decoration:none;';
-      btnWrap.appendChild(btn);
-
-      const note = document.createElement('div');
-      note.style.cssText = 'margin-top:8px;font-size:0.75rem;color:rgba(245,240,232,0.5);';
-      note.innerHTML = 'หากปุ่มไม่ทำงาน: กด <strong style="color:var(--gold)">⋮</strong> มุมขวาบน → <strong style="color:var(--gold)">"เปิดในเบราว์เซอร์"</strong>';
-      btnWrap.appendChild(note);
+      btnWrap.innerHTML = `<a href="${intentUrl}" style="${btnStyle}">🌐 เปิดใน Chrome</a>
+        <div style="${noteStyle}">หากปุ่มไม่ทำงาน: กด <b style="color:var(--gold)">⋮</b> มุมขวาบน → <b style="color:var(--gold)">"เปิดในเบราว์เซอร์"</b></div>`;
     }
   }
+
+  // Auto-expand on first show
+  inappExpand();
 })();
 </script>
 </body>
