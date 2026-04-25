@@ -610,12 +610,12 @@
 <!-- In-app Browser Floating Popup (chat-head style) -->
 <div id="inappFloat" style="display:none;position:fixed;bottom:24px;right:20px;z-index:9999;font-family:'Sarabun',sans-serif;">
   <!-- Collapsed bubble -->
-  <div id="inappBubble" onclick="inappExpand()" style="width:52px;height:52px;border-radius:50%;background:var(--gold);box-shadow:0 4px 18px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.4rem;transition:transform 0.2s;" title="เปิดในเบราว์เซอร์หลัก">🌐</div>
+  <div id="inappBubble" onclick="inappExpand()" style="width:52px;height:52px;border-radius:50%;background:#c94c4c;box-shadow:0 4px 18px rgba(180,50,50,0.55);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.2s;font-family:'Sarabun',sans-serif;font-size:1.8rem;font-weight:900;color:#fff;line-height:1;" title="แจ้งเตือนการใช้งาน">!</div>
   <!-- Expanded card -->
-  <div id="inappCard" style="display:none;position:absolute;bottom:60px;right:0;width:290px;background:#1e1e38;border:1.5px solid rgba(201,168,76,0.45);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.55);overflow:hidden;">
+  <div id="inappCard" style="display:none;position:absolute;bottom:60px;right:0;width:290px;background:#1e1e38;border:1.5px solid rgba(180,50,50,0.55);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.55);overflow:hidden;">
     <!-- Header bar -->
-    <div style="background:rgba(201,168,76,0.18);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(201,168,76,0.2);">
-      <span style="font-weight:600;font-size:0.82rem;color:var(--gold);letter-spacing:0.05em;" id="inappTitle">เปิดในเบราว์เซอร์หลัก</span>
+    <div style="background:rgba(180,50,50,0.25);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(201,80,80,0.3);">
+      <span style="font-weight:700;font-size:0.82rem;color:#e88;letter-spacing:0.05em;" id="inappTitle">⚠️ แจ้งเตือนการใช้งาน</span>
       <button onclick="inappCollapse()" style="background:none;border:none;color:rgba(245,240,232,0.5);font-size:1rem;cursor:pointer;line-height:1;padding:0 2px;" title="พับ">−</button>
     </div>
     <!-- Body -->
@@ -1227,8 +1227,8 @@ function inappCollapse() {
   const noteStyle = 'margin-top:8px;font-size:0.73rem;color:rgba(245,240,232,0.45);line-height:1.5;';
 
   if (isLine) {
-    titleEl.textContent = 'เปิดใน LINE Browser';
-    msgEl.textContent   = 'ดาวน์โหลดไฟล์อาจไม่ทำงานใน LINE กรุณาเปิดในเบราว์เซอร์หลัก';
+    titleEl.textContent = '⚠️ คุณกำลังเปิดผ่าน LINE';
+    msgEl.innerHTML = 'เบราว์เซอร์ใน LINE <b style="color:#e88;">ไม่รองรับการดาวน์โหลดไฟล์</b> กรุณาเปิดในเบราว์เซอร์หลักเพื่อใช้งานได้เต็มที่';
 
     if (isIOS) {
       const extUrl = url + (url.includes('?') ? '&' : '?') + 'openExternalBrowser=1';
@@ -1239,8 +1239,8 @@ function inappCollapse() {
         <div style="${noteStyle}">หากปุ่มไม่ทำงาน: กด <b style="color:var(--gold)">···</b> มุมขวาบน → <b style="color:var(--gold)">"เปิดในเบราว์เซอร์"</b></div>`;
     }
   } else if (isFBAndroid) {
-    titleEl.textContent = 'เปิดใน Facebook Browser';
-    msgEl.textContent   = 'ดาวน์โหลดไฟล์อาจไม่ทำงานใน Facebook กรุณาเปิดในเบราว์เซอร์หลัก';
+    titleEl.textContent = '⚠️ คุณกำลังเปิดผ่าน Facebook';
+    msgEl.innerHTML = 'เบราว์เซอร์ใน Facebook <b style="color:#e88;">ไม่รองรับการดาวน์โหลดไฟล์</b> กรุณาเปิดในเบราว์เซอร์หลักเพื่อใช้งานได้เต็มที่';
 
     if (isIOS) {
       btnWrap.innerHTML = `<div style="${noteStyle};color:rgba(245,240,232,0.65);">กด <b style="color:var(--gold)">···</b> มุมขวาบน → <b style="color:var(--gold)">"เปิดใน Safari"</b></div>`;
